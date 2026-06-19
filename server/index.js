@@ -25,7 +25,8 @@ mongoose.connect(MONGO_URI)
 
 const WhiteboardSchema = new mongoose.Schema({
   roomId: String,
-  elements: Array, 
+  elements: Array,
+  background: String,
   updatedAt: { type: Date, default: Date.now }
 });
 const Whiteboard = mongoose.model('Whiteboard', WhiteboardSchema);
@@ -40,7 +41,9 @@ io.on('connection', (socket) => {
     try {
       const board = await Whiteboard.findOne({ roomId });
       if (board) {
-        socket.emit('init-state', board.elements);
+        socket.emit('init-state', { elements: board.elements, background: board.background });
+      } else {
+        socket.emit('init-state', { elements: [], background: null });
       }
     } catch (err) {
       console.error(err);
@@ -72,11 +75,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('save-state', async ({ roomId, elements }) => {
+  socket.on('save-state', async ({ roomId, elements, background }) => {
     try {
       await Whiteboard.findOneAndUpdate(
         { roomId },
-        { elements, updatedAt: Date.now() },
+        { elements, background, updatedAt: Date.now() },
         { upsert: true }
       );
     } catch (err) {
@@ -85,11 +88,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('sync-board', async (data) => {
-    socket.to(data.roomId).emit('init-state', data.elements);
+    socket.to(data.roomId).emit('init-state', { elements: data.elements, background: data.background });
     try {
       await Whiteboard.findOneAndUpdate(
         { roomId: data.roomId },
-        { elements: data.elements, updatedAt: Date.now() },
+        { elements: data.elements, background: data.background, updatedAt: Date.now() },
         { upsert: true }
       );
     } catch (err) {
