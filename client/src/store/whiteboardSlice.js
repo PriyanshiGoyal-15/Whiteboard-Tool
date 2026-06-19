@@ -7,7 +7,8 @@ const initialState = {
   activeTool: 'pen', 
   color: '#0078d4',
   strokeWidth: 3,
-  panOffset: { x: 0, y: 0 }
+  panOffset: { x: 0, y: 0 },
+  backgroundType: localStorage.getItem('board-background') || 'dots-light'
 };
 
 const whiteboardSlice = createSlice({
@@ -35,6 +36,10 @@ const whiteboardSlice = createSlice({
       if (index !== -1) {
         state.elements[index] = { ...state.elements[index], ...updates };
       }
+    },
+    setBackgroundType: (state, action) => {
+      state.backgroundType = action.payload;
+      localStorage.setItem('board-background', action.payload);
     },
     deleteElement: (state, action) => {
       const id = action.payload;
@@ -94,6 +99,7 @@ export const {
   saveHistoryState,
   addElement,
   updateElement,
+  setBackgroundType,
   deleteElement,
   duplicateElement,
   undo,

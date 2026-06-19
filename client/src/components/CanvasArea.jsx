@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addElement, setElements, clearBoard, updateElement, setPanOffset, setActiveTool, deleteElement, duplicateElement, saveHistoryState } from '../store/whiteboardSlice';
+import { addElement, setElements, clearBoard, updateElement, setPanOffset, setActiveTool, deleteElement, duplicateElement, saveHistoryState, setBackgroundType } from '../store/whiteboardSlice';
 import { v4 as uuidv4 } from 'uuid';
 import { Copy, Trash2 } from 'lucide-react';
 
@@ -15,12 +15,112 @@ const distanceToLineSegment = (px, py, x1, y1, x2, y2) => {
   return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
 };
 
+const BACKGROUNDS = [
+  {
+    id: 'dots-light',
+    name: 'Dotted Light',
+    canvasColor: '#ffffff',
+    canvasImage: 'radial-gradient(#d2d0ce 1px, transparent 1px)',
+    canvasSize: (z) => `${20 * z}px ${20 * z}px`,
+    previewStyle: {
+      backgroundColor: '#ffffff',
+      backgroundImage: 'radial-gradient(#d2d0ce 1px, transparent 1px)',
+      backgroundSize: '4px 4px'
+    }
+  },
+  {
+    id: 'grid-light',
+    name: 'Grid Light',
+    canvasColor: '#ffffff',
+    canvasImage: 'linear-gradient(to right, #e1dfdd 1px, transparent 1px), linear-gradient(to bottom, #e1dfdd 1px, transparent 1px)',
+    canvasSize: (z) => `${20 * z}px ${20 * z}px`,
+    previewStyle: {
+      backgroundColor: '#ffffff',
+      backgroundImage: 'linear-gradient(to right, #e1dfdd 1px, transparent 1px), linear-gradient(to bottom, #e1dfdd 1px, transparent 1px)',
+      backgroundSize: '5px 5px'
+    }
+  },
+  {
+    id: 'ruled-light',
+    name: 'Ruled Light',
+    canvasColor: '#ffffff',
+    canvasImage: 'linear-gradient(#e1dfdd 1px, transparent 1px)',
+    canvasSize: (z) => `100% ${24 * z}px`,
+    previewStyle: {
+      backgroundColor: '#ffffff',
+      backgroundImage: 'linear-gradient(#e1dfdd 1px, transparent 1px)',
+      backgroundSize: '100% 6px'
+    }
+  },
+  {
+    id: 'solid-light',
+    name: 'Solid Light',
+    canvasColor: '#ffffff',
+    canvasImage: 'none',
+    canvasSize: (z) => 'auto',
+    previewStyle: {
+      backgroundColor: '#ffffff',
+      backgroundImage: 'none'
+    }
+  },
+  {
+    id: 'dots-dark',
+    name: 'Dotted Dark',
+    canvasColor: '#1f1f1f',
+    canvasImage: 'radial-gradient(#484644 1px, transparent 1px)',
+    canvasSize: (z) => `${20 * z}px ${20 * z}px`,
+    previewStyle: {
+      backgroundColor: '#1f1f1f',
+      backgroundImage: 'radial-gradient(#484644 1px, transparent 1px)',
+      backgroundSize: '4px 4px'
+    }
+  },
+  {
+    id: 'grid-dark',
+    name: 'Grid Dark',
+    canvasColor: '#1f1f1f',
+    canvasImage: 'linear-gradient(to right, #323130 1px, transparent 1px), linear-gradient(to bottom, #323130 1px, transparent 1px)',
+    canvasSize: (z) => `${20 * z}px ${20 * z}px`,
+    previewStyle: {
+      backgroundColor: '#1f1f1f',
+      backgroundImage: 'linear-gradient(to right, #323130 1px, transparent 1px), linear-gradient(to bottom, #323130 1px, transparent 1px)',
+      backgroundSize: '5px 5px'
+    }
+  },
+  {
+    id: 'ruled-dark',
+    name: 'Ruled Dark',
+    canvasColor: '#1f1f1f',
+    canvasImage: 'linear-gradient(#323130 1px, transparent 1px)',
+    canvasSize: (z) => `100% ${24 * z}px`,
+    previewStyle: {
+      backgroundColor: '#1f1f1f',
+      backgroundImage: 'linear-gradient(#323130 1px, transparent 1px)',
+      backgroundSize: '100% 6px'
+    }
+  },
+  {
+    id: 'solid-dark',
+    name: 'Solid Dark',
+    canvasColor: '#1f1f1f',
+    canvasImage: 'none',
+    canvasSize: (z) => 'auto',
+    previewStyle: {
+      backgroundColor: '#1f1f1f',
+      backgroundImage: 'none'
+    }
+  }
+];
+
 const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const dispatch = useDispatch();
   
-  const { elements, activeTool, color, strokeWidth, panOffset } = useSelector((state) => state.whiteboard);
+  const { elements, activeTool, color, strokeWidth, panOffset, backgroundType } = useSelector((state) => state.whiteboard);
+  const currentBg = BACKGROUNDS.find(bg => bg.id === backgroundType) || BACKGROUNDS[0];
+  const isDarkBackground = currentBg.id.includes('dark');
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentElement, setCurrentElement] = useState(null);
   
@@ -289,7 +389,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
     if (isDrawing && (activeTool === 'pen' || activeTool === 'highlighter' || activeTool === 'eraser') && currentPathRef.current.length > 0) {
       const activePenElement = {
         tool: activeTool,
-        color: activeTool === 'eraser' ? '#f3f2f1' : color,
+        color: activeTool === 'eraser' ? currentBg.canvasColor : color,
         strokeWidth,
         points: currentPathRef.current
       };
@@ -444,8 +544,20 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
   };
 
   const drawElement = (ctx, element) => {
-    ctx.strokeStyle = element.color;
-    ctx.fillStyle = element.color;
+    const isEraser = element.tool === 'eraser';
+    let strokeColor = isEraser ? currentBg.canvasColor : element.color;
+    
+    // Auto-invert black and white for readability on dark/light backgrounds
+    if (!isEraser) {
+      if (isDarkBackground && strokeColor === '#000000') {
+        strokeColor = '#ffffff';
+      } else if (!isDarkBackground && strokeColor === '#ffffff') {
+        strokeColor = '#000000';
+      }
+    }
+    
+    ctx.strokeStyle = strokeColor;
+    ctx.fillStyle = strokeColor;
     ctx.lineWidth = element.strokeWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -516,7 +628,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
           endY - arrowLength * Math.sin(angle + Math.PI / 6)
         );
         ctx.closePath();
-        ctx.fillStyle = element.color;
+        ctx.fillStyle = strokeColor;
         ctx.fill();
       }
     } else if (element.tool === 'text') {
@@ -854,7 +966,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
       context.save();
       context.translate(panOffset.x, panOffset.y);
       context.scale(zoom, zoom);
-      context.strokeStyle = activeTool === 'eraser' ? '#f3f2f1' : color;
+      context.strokeStyle = activeTool === 'eraser' ? currentBg.canvasColor : color;
       context.lineWidth = activeTool === 'highlighter' ? strokeWidth * 3 : strokeWidth;
       context.globalAlpha = activeTool === 'highlighter' ? 0.4 : 1.0;
       context.lineCap = 'round';
@@ -1061,7 +1173,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
       return;
     }
 
-    const useColor = activeTool === 'eraser' ? '#f3f2f1' : color;
+    const useColor = activeTool === 'eraser' ? currentBg.canvasColor : color;
     setCurrentElement({
       id: uuidv4(),
       tool: activeTool,
@@ -1101,7 +1213,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
     setIsDrawing(false);
 
     if (activeTool === 'pen' || activeTool === 'highlighter' || activeTool === 'eraser') {
-      const useColor = activeTool === 'eraser' ? '#f3f2f1' : color;
+      const useColor = activeTool === 'eraser' ? currentBg.canvasColor : color;
       const newEl = {
         id: uuidv4(),
         tool: activeTool,
@@ -1207,14 +1319,15 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
   };
 
   const backgroundPosition = `${panOffset.x}px ${panOffset.y}px`;
-
+  
   return (
     <div 
-      className="absolute inset-0 w-full h-full"
+      className="absolute inset-0 w-full h-full transition-colors duration-300"
       style={{ 
         backgroundPosition,
-        backgroundImage: 'radial-gradient(#d2d0ce 1px, transparent 1px)',
-        backgroundSize: `${20 * zoom}px ${20 * zoom}px`
+        backgroundColor: currentBg.canvasColor,
+        backgroundImage: currentBg.canvasImage,
+        backgroundSize: currentBg.canvasSize(zoom)
       }}
     >
       <canvas
@@ -1317,9 +1430,15 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
               top: `${menuTop}px`,
               pointerEvents: 'auto'
             }}
-            className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-1.5 z-50 transition-all"
+            className={`flex items-center gap-2.5 rounded-xl shadow-lg border backdrop-blur-md px-3 py-1.5 z-50 transition-all duration-300 ${
+              isDarkBackground 
+                ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/30' 
+                : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/30'
+            }`}
           >
-            <div className="flex items-center gap-1 pr-2.5 border-r border-gray-150">
+            <div className={`flex items-center gap-1 pr-2.5 border-r pr-4 ${
+              isDarkBackground ? 'border-neutral-800' : 'border-gray-150'
+            }`}>
               {menuColors.map(c => (
                 <button
                   key={c}
@@ -1335,7 +1454,9 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
             
             <button
               onClick={() => handleDuplicate(selectedIds)}
-              className="p-1.5 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isDarkBackground ? 'text-neutral-400 hover:text-primary hover:bg-neutral-800' : 'text-gray-600 hover:text-primary hover:bg-gray-100'
+              }`}
               title="Duplicate (Ctrl+D)"
             >
               <Copy size={16} />
@@ -1343,7 +1464,9 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
             
             <button
               onClick={() => handleDelete(selectedIds)}
-              className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isDarkBackground ? 'text-neutral-400 hover:text-red-500 hover:bg-red-950/30' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+              }`}
               title="Delete"
             >
               <Trash2 size={16} />
@@ -1353,7 +1476,11 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
       })()}
 
       {/* Zoom Controls */}
-      <div className="absolute bottom-6 right-6 panel-shadow rounded-xl px-2 py-1.5 flex items-center gap-2.5 z-20 select-none">
+      <div className={`absolute bottom-6 right-6 rounded-xl px-2 py-1.5 flex items-center gap-2.5 z-20 select-none shadow-md border backdrop-blur-md transition-all duration-300 ${
+        isDarkBackground 
+          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
+          : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
+      }`}>
         <button 
           onClick={() => {
             const newZoom = Math.max(zoom / 1.2, 0.2);
@@ -1364,7 +1491,9 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
             dispatch(setPanOffset({ x: mouseX - worldX * newZoom, y: mouseY - worldY * newZoom }));
             setZoom(newZoom);
           }}
-          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors font-medium text-lg"
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors font-medium text-lg ${
+            isDarkBackground ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-gray-100 text-gray-600'
+          }`}
           title="Zoom Out"
         >
           -
@@ -1374,7 +1503,9 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
             setZoom(1);
             dispatch(setPanOffset({ x: 0, y: 0 }));
           }}
-          className="text-xs font-semibold text-gray-500 hover:text-gray-900 px-1.5 py-1 hover:bg-gray-100 rounded transition-colors"
+          className={`text-xs font-semibold px-1.5 py-1 rounded transition-colors ${
+            isDarkBackground ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+          }`}
           title="Reset Zoom"
         >
           {Math.round(zoom * 100)}%
@@ -1389,11 +1520,41 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
             dispatch(setPanOffset({ x: mouseX - worldX * newZoom, y: mouseY - worldY * newZoom }));
             setZoom(newZoom);
           }}
-          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors font-medium text-lg"
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors font-medium text-lg ${
+            isDarkBackground ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-gray-100 text-gray-600'
+          }`}
           title="Zoom In"
         >
           +
         </button>
+      </div>
+
+      {/* Background Selector */}
+      <div className={`absolute bottom-6 left-6 rounded-xl px-3 py-2 flex items-center gap-2.5 z-20 select-none shadow-md border backdrop-blur-md transition-all duration-300 ${
+        isDarkBackground 
+          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
+          : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
+      }`}>
+        <span className={`text-[10px] font-bold uppercase tracking-wider mr-1 select-none ${
+          isDarkBackground ? 'text-neutral-500' : 'text-gray-400'
+        }`}>
+          Canvas
+        </span>
+        <div className="flex gap-1.5">
+          {BACKGROUNDS.map((bg) => (
+            <button
+              key={bg.id}
+              onClick={() => dispatch(setBackgroundType(bg.id))}
+              style={bg.previewStyle}
+              className={`w-6 h-6 rounded-md border transition-all hover:scale-110 cursor-pointer ${
+                backgroundType === bg.id 
+                  ? 'border-primary ring-1 ring-primary/30 scale-105 shadow-sm' 
+                  : (isDarkBackground ? 'border-neutral-800 hover:border-neutral-700' : 'border-gray-200 hover:border-gray-300')
+              }`}
+              title={bg.name}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Cursors Layer */}

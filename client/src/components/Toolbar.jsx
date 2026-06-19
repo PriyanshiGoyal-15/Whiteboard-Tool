@@ -21,7 +21,8 @@ const TOOLS = [
 
 const Toolbar = () => {
   const dispatch = useDispatch();
-  const { activeTool, color, strokeWidth } = useSelector((state) => state.whiteboard);
+  const { activeTool, color, strokeWidth, backgroundType } = useSelector((state) => state.whiteboard);
+  const isDarkBackground = backgroundType && backgroundType.includes('dark');
   const [isHovered, setIsHovered] = useState(false);
 
   // Keyboard shortcuts
@@ -42,7 +43,11 @@ const Toolbar = () => {
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="absolute bottom-6 left-1/2 transform -translate-x-1/2 panel-shadow rounded-2xl px-4 py-2 flex flex-col items-center justify-end z-20"
+      className={`absolute bottom-6 left-1/2 transform -translate-x-1/2 rounded-2xl px-4 py-2 flex flex-col items-center justify-end z-20 border backdrop-blur-md transition-all duration-300 ${
+        isDarkBackground 
+          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
+          : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
+      }`}
     >
       
       {/* Expanded settings area (Colors & Stroke) */}
@@ -51,7 +56,7 @@ const Toolbar = () => {
         <div className="flex flex-col gap-2">
           <motion.span 
             animate={{ opacity: isHovered ? 1 : 0, display: isHovered ? 'block' : 'none' }}
-            className="text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+            className={`text-[10px] font-bold uppercase tracking-wider ${isDarkBackground ? 'text-neutral-500' : 'text-gray-400'}`}
           >
             Color
           </motion.span>
@@ -78,10 +83,10 @@ const Toolbar = () => {
             animate={{ opacity: isHovered ? 1 : 0, display: isHovered ? 'flex' : 'none' }}
             className="justify-between items-center"
           >
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkBackground ? 'text-neutral-500' : 'text-gray-400'}`}>
               Thickness
             </span>
-            <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1 rounded">
+            <span className={`text-xs font-mono px-1 rounded ${isDarkBackground ? 'text-neutral-300 bg-neutral-800' : 'text-gray-500 bg-gray-100'}`}>
               {strokeWidth}px
             </span>
           </motion.div>
@@ -92,7 +97,9 @@ const Toolbar = () => {
               max="20"
               value={strokeWidth}
               onChange={(e) => dispatch(setStrokeWidth(parseInt(e.target.value)))}
-              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-primary ${
+                isDarkBackground ? 'bg-neutral-800' : 'bg-gray-200'
+              }`}
             />
           ) : <div className="h-1.5" />}
         </div>
@@ -111,8 +118,8 @@ const Toolbar = () => {
               onClick={() => dispatch(setActiveTool(tool.id))}
               className={`p-2.5 rounded-xl flex flex-col items-center justify-center transition-all relative group ${
                 isActive 
-                  ? 'bg-blue-50 text-primary shadow-sm ring-1 ring-primary/20' 
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? (isDarkBackground ? 'bg-blue-950/40 text-primary shadow-sm ring-1 ring-primary/30' : 'bg-blue-50 text-primary shadow-sm ring-1 ring-primary/20') 
+                  : (isDarkBackground ? 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
               }`}
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
