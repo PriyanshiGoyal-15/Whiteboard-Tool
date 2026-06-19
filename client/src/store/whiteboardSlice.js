@@ -1,0 +1,108 @@
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+  elements: [],
+  history: [],
+  redoHistory: [],
+  activeTool: 'pen', 
+  color: '#0078d4',
+  strokeWidth: 3,
+  panOffset: { x: 0, y: 0 }
+};
+
+const whiteboardSlice = createSlice({
+  name: 'whiteboard',
+  initialState,
+  reducers: {
+    setPanOffset: (state, action) => {
+      state.panOffset = action.payload;
+    },
+    setElements: (state, action) => {
+      state.elements = action.payload;
+    },
+    saveHistoryState: (state) => {
+      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      state.redoHistory = [];
+    },
+    addElement: (state, action) => {
+      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      state.redoHistory = [];
+      state.elements.push(action.payload);
+    },
+    updateElement: (state, action) => {
+      const { id, updates } = action.payload;
+      const index = state.elements.findIndex(el => el.id === id);
+      if (index !== -1) {
+        state.elements[index] = { ...state.elements[index], ...updates };
+      }
+    },
+    deleteElement: (state, action) => {
+      const id = action.payload;
+      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      state.redoHistory = [];
+      state.elements = state.elements.filter(el => el.id !== id);
+    },
+    duplicateElement: (state, action) => {
+      const { id, newId } = action.payload;
+      const original = state.elements.find(el => el.id === id);
+      if (original) {
+        state.history.push(JSON.parse(JSON.stringify(state.elements)));
+        state.redoHistory = [];
+        const duplicated = {
+          ...original,
+          id: newId,
+          startX: original.startX !== undefined ? original.startX + 20 : undefined,
+          startY: original.startY !== undefined ? original.startY + 20 : undefined,
+          points: original.points ? original.points.map(p => ({ x: p.x + 20, y: p.y + 20 })) : undefined
+        };
+        state.elements.push(duplicated);
+      }
+    },
+    undo: (state) => {
+      if (state.history.length > 0) {
+        const prev = state.history.pop();
+        state.redoHistory.push(JSON.parse(JSON.stringify(state.elements)));
+        state.elements = prev;
+      }
+    },
+    redo: (state) => {
+      if (state.redoHistory.length > 0) {
+        const next = state.redoHistory.pop();
+        state.history.push(JSON.parse(JSON.stringify(state.elements)));
+        state.elements = next;
+      }
+    },
+    clearBoard: (state) => {
+      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      state.redoHistory = [];
+      state.elements = [];
+    },
+    setActiveTool: (state, action) => {
+      state.activeTool = action.payload;
+    },
+    setColor: (state, action) => {
+      state.color = action.payload;
+    },
+    setStrokeWidth: (state, action) => {
+      state.strokeWidth = action.payload;
+    }
+  },
+});
+
+export const {
+  setElements,
+  saveHistoryState,
+  addElement,
+  updateElement,
+  deleteElement,
+  duplicateElement,
+  undo,
+  redo,
+  clearBoard,
+  setActiveTool,
+  setColor,
+  setStrokeWidth,
+  setPanOffset
+} = whiteboardSlice.actions;
+
+export default whiteboardSlice.reducer;
