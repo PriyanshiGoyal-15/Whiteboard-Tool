@@ -646,7 +646,6 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
     socket.on('update-element', (payload) => dispatch(updateElement(payload)));
     socket.on('delete-element', (id) => dispatch(deleteElement(id)));
     socket.on('clear', () => dispatch(clearBoard()));
-    socket.on('init-state', (initState) => dispatch(setElements(initState)));
     
     socket.on('cursor-move', (data) => {
       setCursors(prev => ({ ...prev, [data.socketId]: data }));
@@ -657,7 +656,6 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
       socket.off('update-element');
       socket.off('delete-element');
       socket.off('clear');
-      socket.off('init-state');
       socket.off('cursor-move');
     };
   }, [socket, dispatch]);
