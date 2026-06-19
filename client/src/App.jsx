@@ -19,6 +19,7 @@ function App() {
     return newRoomId;
   });
   const canvasRef = useRef(null);
+  const isInitializedRef = useRef(false);
   const dispatch = useDispatch();
   const elements = useSelector((state) => state.whiteboard.elements);
   const backgroundType = useSelector((state) => state.whiteboard.backgroundType);
@@ -34,6 +35,7 @@ function App() {
 
     newSocket.on('init-state', (data) => {
       console.log('[App] init-state received:', data);
+      isInitializedRef.current = true;
       if (data) {
         if (Array.isArray(data)) {
           dispatch(setElements(data));
@@ -49,7 +51,7 @@ function App() {
 
   // Debounced MongoDB Save State
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !isInitializedRef.current) return;
     const delay = setTimeout(() => {
       socket.emit('save-state', { roomId, elements, background: backgroundType });
     }, 1000); // Save after 1 second of inactivity
@@ -59,7 +61,7 @@ function App() {
   // Browser Refresh Protection
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (socket) {
+      if (socket && isInitializedRef.current) {
         socket.emit('save-state', { roomId, elements, background: backgroundType });
       }
     };

@@ -160,6 +160,9 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
   // Spawn sticky note or text box instantly on toolbar selection
   useEffect(() => {
     if (activeTool === 'sticky') {
+      // Don't spawn a new sticky if we're currently editing an existing one
+      if (textInput.visible) return;
+
       const centerX = (window.innerWidth / 2 - panOffset.x - 75) / zoom;
       const centerY = (window.innerHeight / 2 - panOffset.y - 75) / zoom;
       
@@ -385,15 +388,29 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
       drawElement(context, currentElement);
     }
 
-    // Draw active pen/highlighter path
-    if (isDrawing && (activeTool === 'pen' || activeTool === 'highlighter' || activeTool === 'eraser') && currentPathRef.current.length > 0) {
+    // Draw active pen/highlighter path (eraser has no persisted path)
+    if (isDrawing && (activeTool === 'pen' || activeTool === 'highlighter') && currentPathRef.current.length > 0) {
       const activePenElement = {
         tool: activeTool,
-        color: activeTool === 'eraser' ? currentBg.canvasColor : color,
+        color: color,
         strokeWidth,
         points: currentPathRef.current
       };
       drawElement(context, activePenElement);
+    }
+
+    // Draw a live eraser cursor ring while erasing
+    if (isDrawing && activeTool === 'eraser' && currentPathRef.current.length > 0) {
+      const last = currentPathRef.current[currentPathRef.current.length - 1];
+      const eraserRadius = (strokeWidth * 4) / zoom;
+      context.save();
+      context.globalCompositeOperation = 'source-over';
+      context.beginPath();
+      context.arc(last.x, last.y, eraserRadius, 0, Math.PI * 2);
+      context.strokeStyle = isDarkBackground ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
+      context.lineWidth = 1.5 / zoom;
+      context.stroke();
+      context.restore();
     }
 
     // Draw marquee select box
@@ -544,17 +561,17 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
   };
 
   const drawElement = (ctx, element) => {
-    const isEraser = element.tool === 'eraser';
-    let strokeColor = isEraser ? currentBg.canvasColor : element.color;
+    const isEraser = false; // erasers are no longer stored as elements
+    let strokeColor = element.color;
     
     // Auto-invert black and white for readability on dark/light backgrounds
-    if (!isEraser) {
-      if (isDarkBackground && strokeColor === '#000000') {
-        strokeColor = '#ffffff';
-      } else if (!isDarkBackground && strokeColor === '#ffffff') {
-        strokeColor = '#000000';
-      }
+    if (isDarkBackground && strokeColor === '#000000') {
+      strokeColor = '#ffffff';
+    } else if (!isDarkBackground && strokeColor === '#ffffff') {
+      strokeColor = '#000000';
     }
+    
+    ctx.globalCompositeOperation = 'source-over';
     
     ctx.strokeStyle = strokeColor;
     ctx.fillStyle = strokeColor;
@@ -957,14 +974,36 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
       return;
     }
 
-    if (activeTool === 'pen' || activeTool === 'highlighter' || activeTool === 'eraser') {
+    if (activeTool === 'eraser') {
+      // Eraser deletes elements it touches — find any element within eraser radius
+      const eraserRadius = strokeWidth * 4;
+      const eraserX = worldCoords.x;
+      const eraserY = worldCoords.y;
+
+      const toDelete = elements.filter(el => {
+        if (el.tool === 'eraser') return false; // never delete old eraser strokes if any linger
+        return isPointInElement(el, eraserX, eraserY) ||
+          (el.points && el.points.some(p => Math.hypot(p.x - eraserX, p.y - eraserY) <= eraserRadius));
+      });
+
+      toDelete.forEach(el => {
+        dispatch(deleteElement(el.id));
+        if (socket && roomId) socket.emit('delete-element', { roomId, id: el.id });
+      });
+
+      // Track path for the live eraser cursor ring
+      currentPathRef.current.push({ x: eraserX, y: eraserY });
+      return;
+    }
+
+    if (activeTool === 'pen' || activeTool === 'highlighter') {
       currentPathRef.current.push({ x: worldCoords.x, y: worldCoords.y });
-      
+
       const context = contextRef.current;
       context.save();
       context.translate(panOffset.x, panOffset.y);
       context.scale(zoom, zoom);
-      context.strokeStyle = activeTool === 'eraser' ? currentBg.canvasColor : color;
+      context.strokeStyle = color;
       context.lineWidth = activeTool === 'highlighter' ? strokeWidth * 3 : strokeWidth;
       context.globalAlpha = activeTool === 'highlighter' ? 0.4 : 1.0;
       context.lineCap = 'round';
@@ -1011,7 +1050,11 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
         isEditingExisting: true,
         text: clicked.text
       });
-      dispatch(setActiveTool(clicked.tool));
+      // Stay in 'select' mode — dispatching setActiveTool('sticky') here would
+      // trigger the useEffect that spawns a brand-new sticky note.
+      if (clicked.tool !== 'sticky' && clicked.tool !== 'text') {
+        dispatch(setActiveTool('select'));
+      }
     }
   };
 
@@ -1210,12 +1253,17 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
     if (!isDrawing) return;
     setIsDrawing(false);
 
-    if (activeTool === 'pen' || activeTool === 'highlighter' || activeTool === 'eraser') {
-      const useColor = activeTool === 'eraser' ? currentBg.canvasColor : color;
+    if (activeTool === 'eraser') {
+      // Eraser works in real-time during move; just clear the path on up
+      currentPathRef.current = [];
+      return;
+    }
+
+    if (activeTool === 'pen' || activeTool === 'highlighter') {
       const newEl = {
         id: uuidv4(),
         tool: activeTool,
-        color: useColor,
+        color,
         strokeWidth: activeTool === 'highlighter' ? strokeWidth * 3 : strokeWidth,
         points: currentPathRef.current
       };
