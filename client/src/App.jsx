@@ -82,11 +82,15 @@ function App() {
 
   const handleExport = () => {
     if (canvasRef.current) {
-      const dataUrl = canvasRef.current.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'whiteboard-export.png';
-      link.href = dataUrl;
-      link.click();
+      if (canvasRef.current.exportWithBg) {
+        canvasRef.current.exportWithBg();
+      } else {
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'whiteboard-export.png';
+        link.href = dataUrl;
+        link.click();
+      }
     }
   };
 

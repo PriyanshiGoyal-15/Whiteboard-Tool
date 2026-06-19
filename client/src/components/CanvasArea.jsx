@@ -1305,6 +1305,90 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
     return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
   }, [isDrawingMarquee, isDrawing]);
 
+  // Export helper attached to the ref to support exporting with backgrounds
+  useEffect(() => {
+    if (forwardRef && forwardRef.current) {
+      forwardRef.current.exportWithBg = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // 1. Fill background color
+        tempCtx.fillStyle = currentBg.canvasColor;
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // 2. Draw background pattern
+        tempCtx.save();
+        
+        if (currentBg.id.includes('dots')) {
+          const dotColor = currentBg.id.includes('dark') ? '#484644' : '#d2d0ce';
+          tempCtx.fillStyle = dotColor;
+          const spacing = 20 * zoom;
+          const startX = panOffset.x % spacing;
+          const startY = panOffset.y % spacing;
+          
+          for (let x = startX; x < tempCanvas.width; x += spacing) {
+            for (let y = startY; y < tempCanvas.height; y += spacing) {
+              tempCtx.beginPath();
+              tempCtx.arc(x, y, 1 * Math.max(1, zoom * 0.5), 0, Math.PI * 2);
+              tempCtx.fill();
+            }
+          }
+        } else if (currentBg.id.includes('grid')) {
+          const gridColor = currentBg.id.includes('dark') ? '#323130' : '#e1dfdd';
+          tempCtx.strokeStyle = gridColor;
+          tempCtx.lineWidth = 1;
+          const spacing = 20 * zoom;
+          const startX = panOffset.x % spacing;
+          const startY = panOffset.y % spacing;
+          
+          for (let x = startX; x < tempCanvas.width; x += spacing) {
+            tempCtx.beginPath();
+            tempCtx.moveTo(x, 0);
+            tempCtx.lineTo(x, tempCanvas.height);
+            tempCtx.stroke();
+          }
+          
+          for (let y = startY; y < tempCanvas.height; y += spacing) {
+            tempCtx.beginPath();
+            tempCtx.moveTo(0, y);
+            tempCtx.lineTo(tempCanvas.width, y);
+            tempCtx.stroke();
+          }
+        } else if (currentBg.id.includes('ruled')) {
+          const lineColor = currentBg.id.includes('dark') ? '#323130' : '#e1dfdd';
+          tempCtx.strokeStyle = lineColor;
+          tempCtx.lineWidth = 1;
+          const spacing = 24 * zoom;
+          const startY = panOffset.y % spacing;
+          
+          for (let y = startY; y < tempCanvas.height; y += spacing) {
+            tempCtx.beginPath();
+            tempCtx.moveTo(0, y);
+            tempCtx.lineTo(tempCanvas.width, y);
+            tempCtx.stroke();
+          }
+        }
+        
+        tempCtx.restore();
+        
+        // 3. Draw the main canvas contents
+        tempCtx.drawImage(canvas, 0, 0);
+        
+        // 4. Trigger download
+        const dataUrl = tempCanvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'whiteboard-export.png';
+        link.href = dataUrl;
+        link.click();
+      };
+    }
+  });
+
   const getCursorStyle = () => {
     if (activeTool === 'pan') return isDrawing ? 'cursor-grabbing' : 'cursor-grab';
     if (activeTool === 'eraser') return 'cursor-cell';
