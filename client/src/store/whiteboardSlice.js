@@ -1,5 +1,14 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+const MAX_HISTORY = 50;
+
+const pushHistory = (historyArr, snapshot) => {
+  historyArr.push(snapshot);
+  if (historyArr.length > MAX_HISTORY) {
+    historyArr.splice(0, historyArr.length - MAX_HISTORY);
+  }
+};
+
 const initialState = {
   elements: [],
   history: [],
@@ -22,11 +31,11 @@ const whiteboardSlice = createSlice({
       state.elements = action.payload;
     },
     saveHistoryState: (state) => {
-      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      pushHistory(state.history, JSON.parse(JSON.stringify(state.elements)));
       state.redoHistory = [];
     },
     addElement: (state, action) => {
-      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      pushHistory(state.history, JSON.parse(JSON.stringify(state.elements)));
       state.redoHistory = [];
       state.elements.push(action.payload);
     },
@@ -43,7 +52,7 @@ const whiteboardSlice = createSlice({
     },
     deleteElement: (state, action) => {
       const id = action.payload;
-      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      pushHistory(state.history, JSON.parse(JSON.stringify(state.elements)));
       state.redoHistory = [];
       state.elements = state.elements.filter(el => el.id !== id);
     },
@@ -51,7 +60,7 @@ const whiteboardSlice = createSlice({
       const { id, newId } = action.payload;
       const original = state.elements.find(el => el.id === id);
       if (original) {
-        state.history.push(JSON.parse(JSON.stringify(state.elements)));
+        pushHistory(state.history, JSON.parse(JSON.stringify(state.elements)));
         state.redoHistory = [];
         const duplicated = {
           ...original,
@@ -66,19 +75,19 @@ const whiteboardSlice = createSlice({
     undo: (state) => {
       if (state.history.length > 0) {
         const prev = state.history.pop();
-        state.redoHistory.push(JSON.parse(JSON.stringify(state.elements)));
+        pushHistory(state.redoHistory, JSON.parse(JSON.stringify(state.elements)));
         state.elements = prev;
       }
     },
     redo: (state) => {
       if (state.redoHistory.length > 0) {
         const next = state.redoHistory.pop();
-        state.history.push(JSON.parse(JSON.stringify(state.elements)));
+        pushHistory(state.history, JSON.parse(JSON.stringify(state.elements)));
         state.elements = next;
       }
     },
     clearBoard: (state) => {
-      state.history.push(JSON.parse(JSON.stringify(state.elements)));
+      pushHistory(state.history, JSON.parse(JSON.stringify(state.elements)));
       state.redoHistory = [];
       state.elements = [];
     },

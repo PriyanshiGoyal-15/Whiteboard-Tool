@@ -1,9 +1,41 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { Undo2, Redo2, Download, Trash2, Users } from 'lucide-react';
+import { Undo2, Redo2, Download, Trash2, Users, Wifi, WifiOff, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const TopBar = ({ onExport, onClear, onUndo, onRedo }) => {
+const ConnectionBadge = ({ status, isDark }) => {
+  const configs = {
+    connected: {
+      icon: <Wifi size={12} />,
+      label: 'Live',
+      color: isDark ? 'text-emerald-400' : 'text-emerald-600',
+      dot: 'bg-emerald-500'
+    },
+    disconnected: {
+      icon: <WifiOff size={12} />,
+      label: 'Offline',
+      color: isDark ? 'text-red-400' : 'text-red-500',
+      dot: 'bg-red-500'
+    },
+    connecting: {
+      icon: <Loader size={12} className="animate-spin" />,
+      label: 'Connecting…',
+      color: isDark ? 'text-yellow-400' : 'text-yellow-600',
+      dot: 'bg-yellow-500 animate-pulse'
+    }
+  };
+
+  const cfg = configs[status] ?? configs.connecting;
+
+  return (
+    <div className={`flex items-center gap-1.5 text-xs font-medium ${cfg.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </div>
+  );
+};
+
+const TopBar = ({ onExport, onClear, onUndo, onRedo, connectionStatus = 'connecting' }) => {
   const { history, redoHistory, backgroundType } = useSelector((state) => state.whiteboard);
   const isDarkBackground = backgroundType && backgroundType.includes('dark');
 
@@ -18,6 +50,7 @@ const TopBar = ({ onExport, onClear, onUndo, onRedo }) => {
           : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
       }`}
     >
+      {/* Brand + Connection Status */}
       <div className={`flex items-center gap-2 mr-2 border-r pr-4 ${
         isDarkBackground ? 'border-neutral-800' : 'border-gray-200'
       }`}>
@@ -27,6 +60,8 @@ const TopBar = ({ onExport, onClear, onUndo, onRedo }) => {
         }`}>
           Study<span className="text-primary">Board</span>
         </h1>
+        <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'}`} />
+        <ConnectionBadge status={connectionStatus} isDark={isDarkBackground} />
       </div>
       
       <div className="flex items-center gap-0.5">
@@ -73,7 +108,7 @@ const TopBar = ({ onExport, onClear, onUndo, onRedo }) => {
         <Trash2 size={18} />
       </motion.button>
 
-      <div className={`h-6 w-px mx-1 ${isDarkBackground ? 'bg-neutral-800' : 'bg-gray-200'}`}></div>
+      <div className={`h-6 w-px mx-1 ${isDarkBackground ? 'bg-neutral-800' : 'bg-gray-200'}`} />
 
       <motion.button
         whileHover={{ scale: 1.02 }}
