@@ -43,7 +43,7 @@ const Toolbar = () => {
 
   return (
     <div 
-      className="absolute bottom-2 sm:bottom-6 left-0 right-0 px-2 sm:px-0 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-40 flex flex-col items-center gap-4"
+      className="absolute bottom-2 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-4 w-[calc(100vw-16px)] sm:w-max"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -138,7 +138,7 @@ const Toolbar = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex items-center gap-1 w-full justify-start sm:justify-center overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {TOOLS.map((tool) => {
             const Icon = tool.icon;
             const isActive = activeTool === tool.id;
