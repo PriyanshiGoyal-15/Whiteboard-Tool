@@ -154,7 +154,7 @@ const Toolbar = () => {
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center gap-1 w-full justify-start sm:justify-center overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex items-center gap-1 w-full justify-start lg:justify-center overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {TOOLS.map((tool) => {
             const Icon = tool.icon;
             const isActive = activeTool === tool.id;
