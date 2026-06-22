@@ -6,10 +6,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
 
-// ─── Express App ────────────────────────────────────────────────────────────
 const app = express();
 
-// Security headers (disable contentSecurityPolicy for Socket.io compatibility)
 app.use(helmet({ contentSecurityPolicy: false }));
 
 let ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
@@ -39,20 +37,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
-// Health check endpoint
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
 const server = http.createServer(app);
 
-// ─── Socket.io ──────────────────────────────────────────────────────────────
 const io = new Server(server, {
   cors: corsOptions,
-  // Graceful reconnect — don't drop connection on brief network blip
   pingTimeout: 60000,
   pingInterval: 25000
 });
 
-// ─── MongoDB ────────────────────────────────────────────────────────────────
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/whiteboard';
 const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/whiteboard';
 
@@ -88,7 +82,6 @@ const WhiteboardSchema = new mongoose.Schema({
 
 const Whiteboard = mongoose.model('Whiteboard', WhiteboardSchema);
 
-// Check if room exists endpoint
 app.get('/rooms/:roomId/exists', async (req, res) => {
   const { roomId } = req.params;
   try {
@@ -99,18 +92,15 @@ app.get('/rooms/:roomId/exists', async (req, res) => {
   }
 });
 
-// ─── Validation Helpers ──────────────────────────────────────────────────────
 const isValidRoomId = (id) =>
   typeof id === 'string' && id.length > 0 && id.length <= 128;
 
 const isValidElements = (el) =>
-  Array.isArray(el) && el.length <= 10_000; // Guard against absurdly large payloads
+  Array.isArray(el) && el.length <= 10000;
 
-// ─── Socket Events ───────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   console.info(`[WS] Connected: ${socket.id}`);
 
-  // Per-socket rate-limit state for save-state
   let lastSaveTime = 0;
   const SAVE_THROTTLE_MS = 800;
 
@@ -177,7 +167,6 @@ io.on('connection', (socket) => {
     if (!isValidRoomId(roomId)) return;
     if (!isValidElements(elements)) return;
 
-    // Per-socket throttle — max 1 save per SAVE_THROTTLE_MS
     const now = Date.now();
     if (now - lastSaveTime < SAVE_THROTTLE_MS) return;
     lastSaveTime = now;
@@ -218,13 +207,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// ─── Start Server ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.info(`[Server] Listening on port ${PORT} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   console.info('[Server] SIGTERM received — shutting down gracefully');
   server.close(() => {

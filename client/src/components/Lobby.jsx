@@ -7,13 +7,13 @@ const COLORS = ['blue', 'amber', 'crimson', 'emerald', 'indigo', 'violet', 'gold
 const NOUNS = ['fox', 'panda', 'koala', 'falcon', 'otter', 'badger', 'panther', 'eagle', 'tiger', 'sketch'];
 
 const AVATAR_COLORS = [
-  '#3b82f6', // Blue
-  '#8b5cf6', // Violet
-  '#ec4899', // Pink
-  '#f97316', // Orange
-  '#22c55e', // Green
-  '#14b8a6', // Teal
-  '#eab308'  // Yellow
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#f97316',
+  '#22c55e',
+  '#14b8a6',
+  '#eab308'
 ];
 
 const generateRandomRoomId = () => {
@@ -122,7 +122,6 @@ const Lobby = ({ onJoin }) => {
       
       <div className="relative z-10 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-8 items-center justify-center min-h-[600px]">
         
-        {/* Left Pane - Glass Info Card */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -173,14 +172,12 @@ const Lobby = ({ onJoin }) => {
           </div>
         </motion.div>
 
-        {/* Right Pane - Glass Action Card */}
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
           className="w-full md:w-[420px] p-8 md:p-10 rounded-3xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl relative overflow-hidden"
         >
-          {/* Subtle top glare effect */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           
           <AnimatePresence mode="wait">
@@ -276,7 +273,6 @@ const Lobby = ({ onJoin }) => {
                 </div>
 
                 <div className="flex flex-col gap-10">
-                  {/* Host Section */}
                   <form onSubmit={(e) => handleSubmit(e, 'create')} className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1 ml-1">
                       <h3 className="text-[13px] font-bold text-slate-300 tracking-wide flex items-center gap-2"><Sparkles size={14} className="text-teal-400"/> Start Fresh</h3>
@@ -309,7 +305,6 @@ const Lobby = ({ onJoin }) => {
                     </div>
                   </div>
 
-                  {/* Join Section */}
                   <form onSubmit={(e) => handleSubmit(e, 'join')} className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1 ml-1">
                       <h3 className="text-[13px] font-bold text-slate-300 tracking-wide flex items-center gap-2"><Users size={14} className="text-indigo-400"/> Join Existing</h3>

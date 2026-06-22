@@ -8,13 +8,11 @@ import Toolbar from './components/Toolbar';
 import CanvasArea from './components/CanvasArea';
 import Lobby from './components/Lobby';
 
-// In dev, connects directly to localhost:3001.
-// In production, set VITE_SERVER_URL to your deployed backend URL.
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 function App() {
   const [socket, setSocket] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connected' | 'connecting' | 'disconnected'
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
 
   const [roomId, setRoomId] = useState(() => {
     return new URLSearchParams(window.location.search).get('room') || null;
@@ -43,7 +41,6 @@ function App() {
     if (color) setUserColor(color);
     setIsJoined(true);
     
-    // Update the URL to include the room ID so it can be shared easily
     const newUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomId)}`;
     window.history.replaceState({ path: newUrl }, '', newUrl);
   };
@@ -52,7 +49,6 @@ function App() {
     if (!isJoined || !roomId) return;
 
     const newSocket = io(SERVER_URL, {
-      // Let socket.io handle reconnects with exponential backoff
       reconnectionDelayMax: 10000,
       reconnectionAttempts: Infinity
     });
@@ -61,8 +57,6 @@ function App() {
 
     newSocket.on('connect', () => {
       setConnectionStatus('connected');
-      // Only fetch initial state on the very first connection.
-      // On reconnects we keep whatever is live in Redux — don't overwrite.
       if (!isInitializedRef.current) {
         newSocket.emit('join-room', roomId);
       }
@@ -74,8 +68,6 @@ function App() {
 
     newSocket.on('disconnect', (reason) => {
       setConnectionStatus('disconnected');
-      // If the server kicked us (e.g. restart), re-join on next connect
-      // but do NOT reset isInitializedRef — we still have live state.
       if (reason === 'io server disconnect') {
         newSocket.connect();
       }
@@ -83,14 +75,10 @@ function App() {
 
     newSocket.on('reconnect', () => {
       setConnectionStatus('connected');
-      // Re-join room so the server tracks this socket in the right room,
-      // but ignore the returned init-state (isInitializedRef stays true).
       newSocket.emit('join-room', roomId);
     });
 
     newSocket.on('init-state', (data) => {
-      // Only apply if we haven't loaded state yet — this prevents a
-      // reconnect from overwriting live in-progress edits.
       if (isInitializedRef.current) return;
       isInitializedRef.current = true;
 
@@ -107,7 +95,6 @@ function App() {
     return () => newSocket.close();
   }, [roomId, dispatch, isJoined]);
 
-  // Debounced MongoDB save — 1 second after last change
   useEffect(() => {
     if (!isJoined || !socket || !isInitializedRef.current) return;
     const delay = setTimeout(() => {
@@ -116,10 +103,6 @@ function App() {
     return () => clearTimeout(delay);
   }, [elements, backgroundType, socket, roomId, isJoined]);
 
-  // Last-chance save on tab close/refresh.
-  // IMPORTANT: reads from store.getState() directly — NOT from the React closure —
-  // because React batches re-renders asynchronously, so the closed-over `elements`
-  // variable can be one render stale when the user reloads very quickly.
   useEffect(() => {
     if (!isJoined) return;
     const handleBeforeUnload = () => {
@@ -134,7 +117,7 @@ function App() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [socket, roomId, isJoined]); // elements/backgroundType intentionally excluded — we read from store directly
+  }, [socket, roomId, isJoined]);
 
   const handleUndo = () => {
     dispatch(undo());
@@ -164,7 +147,6 @@ function App() {
     }, 0);
   };
 
-  // Global keyboard shortcuts for undo/redo
   useEffect(() => {
     if (!isJoined) return;
     const handleKeyDown = (e) => {

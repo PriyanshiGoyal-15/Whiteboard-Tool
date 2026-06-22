@@ -25,7 +25,6 @@ const Toolbar = () => {
   const isDarkBackground = backgroundType && backgroundType.includes('dark');
   const [isHovered, setIsHovered] = useState(false);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -50,9 +49,7 @@ const Toolbar = () => {
       }`}
     >
       
-      {/* Expanded settings area (Colors & Stroke) */}
       <div className="w-full flex justify-between items-center px-4 pb-4 w-[500px]">
-        {/* Colors Section */}
         <div className="flex flex-col gap-2">
           <motion.span 
             animate={{ opacity: isHovered ? 1 : 0, display: isHovered ? 'block' : 'none' }}
@@ -77,7 +74,6 @@ const Toolbar = () => {
           </div>
         </div>
 
-        {/* Stroke Width Section */}
         <div className="flex flex-col gap-2 w-32">
           <motion.div 
             animate={{ opacity: isHovered ? 1 : 0, display: isHovered ? 'flex' : 'none' }}
@@ -105,7 +101,6 @@ const Toolbar = () => {
         </div>
       </div>
 
-      {/* Tools Section (Bottom row) */}
       <div className="flex items-center gap-1 w-full justify-center">
         {TOOLS.map((tool) => {
           const Icon = tool.icon;
@@ -124,7 +119,6 @@ const Toolbar = () => {
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
               
-              {/* Custom Tooltip */}
               <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md">
                 {tool.label}
               </div>

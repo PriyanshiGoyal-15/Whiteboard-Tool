@@ -116,15 +116,14 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const dispatch = useDispatch();
-  
+
   const { elements, activeTool, color, strokeWidth, panOffset, backgroundType } = useSelector((state) => state.whiteboard);
   const currentBg = BACKGROUNDS.find(bg => bg.id === backgroundType) || BACKGROUNDS[0];
   const isDarkBackground = currentBg.id.includes('dark');
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentElement, setCurrentElement] = useState(null);
-  
-  // Selection and drag states
+
   const currentPathRef = useRef([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -132,7 +131,6 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   const [zoom, setZoom] = useState(1);
   const [hoveredHandle, setHoveredHandle] = useState(null);
 
-  // Marquee Selection states
   const [isDrawingMarquee, setIsDrawingMarquee] = useState(false);
   const [marqueeStart, setMarqueeStart] = useState({ x: 0, y: 0 });
   const [marqueeEnd, setMarqueeEnd] = useState({ x: 0, y: 0 });
@@ -147,29 +145,26 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   const inputRef = useRef(null);
   const isCommittingRef = useRef(false);
 
-  // Other users' cursors
   const [cursors, setCursors] = useState({});
 
-  // Focus the input/textarea when it becomes visible or when it changes to a new element
   useEffect(() => {
     if (textInput.visible && inputRef.current) {
       inputRef.current.focus();
     }
   }, [textInput.visible, textInput.id]);
 
-  // Spawn sticky note or text box instantly on toolbar selection
   useEffect(() => {
     if (activeTool === 'sticky') {
-      // Don't spawn a new sticky if we're currently editing an existing one
+
       if (textInput.visible) return;
 
       const centerX = (window.innerWidth / 2 - panOffset.x - 75) / zoom;
       const centerY = (window.innerHeight / 2 - panOffset.y - 75) / zoom;
-      
+
       const newStickyElement = {
         id: uuidv4(),
         tool: 'sticky',
-        color: '#fef08a', // Default yellow sticky
+        color: '#fef08a',
         strokeWidth: 3,
         startX: centerX,
         startY: centerY,
@@ -177,20 +172,20 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         height: 150,
         text: ''
       };
-      
+
       dispatch(addElement(newStickyElement));
       if (socket && roomId) {
         socket.emit('draw', { roomId, element: newStickyElement });
       }
-      
+
       setSelectedIds([newStickyElement.id]);
       dispatch(setActiveTool('select'));
-      
+
     } else if (activeTool === 'text') {
       if (!textInput.visible) {
         const centerX = (window.innerWidth / 2 - panOffset.x - 125) / zoom;
         const centerY = (window.innerHeight / 2 - panOffset.y - 10) / zoom;
-        
+
         setTextInput({
           visible: true,
           x: centerX,
@@ -208,53 +203,52 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     const canvas = canvasRef.current;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    
+
     const context = canvas.getContext('2d');
     contextRef.current = context;
-    
+
     if (forwardRef) {
       forwardRef.current = canvas;
     }
   }, [forwardRef]);
 
-  // Add Wheel event listener for zooming and panning
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const handleWheel = (e) => {
       e.preventDefault();
       const zoomFactor = 1.1;
       let newZoom = zoom;
-      
+
       if (e.ctrlKey || e.metaKey) {
-        // Zooming
+
         if (e.deltaY < 0) {
-          newZoom = Math.min(zoom * zoomFactor, 5); // max zoom 5x
+          newZoom = Math.min(zoom * zoomFactor, 5);
         } else {
-          newZoom = Math.max(zoom / zoomFactor, 0.2); // min zoom 0.2x
+          newZoom = Math.max(zoom / zoomFactor, 0.2);
         }
       } else {
-        // Panning with wheel scroll
+
         dispatch(setPanOffset({
           x: panOffset.x - e.deltaX,
           y: panOffset.y - e.deltaY
         }));
         return;
       }
-      
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       const worldX = (mouseX - panOffset.x) / zoom;
       const worldY = (mouseY - panOffset.y) / zoom;
-      
+
       const newPanOffset = {
         x: mouseX - worldX * newZoom,
         y: mouseY - worldY * newZoom
       };
-      
+
       setZoom(newZoom);
       dispatch(setPanOffset(newPanOffset));
     };
@@ -262,7 +256,6 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, [zoom, panOffset, dispatch]);
-
 
   const getWorldCoordinates = (clientX, clientY) => {
     return {
@@ -283,7 +276,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
 
   const getElementBounds = (el) => {
     let minX = 0, maxX = 0, minY = 0, maxY = 0;
-    
+
     if (el.tool === 'pen' || el.tool === 'highlighter' || el.tool === 'eraser') {
       if (el.points && el.points.length > 0) {
         minX = Math.min(...el.points.map(p => p.x));
@@ -310,19 +303,19 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       minY = el.startY - fontSize;
       maxY = el.startY;
     } else {
-      // rect, sticky
+
       minX = Math.min(el.startX, el.startX + el.width);
       maxX = Math.max(el.startX, el.startX + el.width);
       minY = Math.min(el.startY, el.startY + el.height);
       maxY = Math.max(el.startY, el.startY + el.height);
     }
-    
+
     return { minX, maxX, minY, maxY };
   };
 
   const isPointInElement = (el, x, y) => {
     const bounds = getElementBounds(el);
-    
+
     if (el.tool === 'rect' || el.tool === 'sticky') {
       return x >= bounds.minX && x <= bounds.maxX &&
              y >= bounds.minY && y <= bounds.maxY;
@@ -363,32 +356,27 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       }
     });
     if (minX === Infinity) return false;
-    // Bounding box with 5px padding
+
     return x >= minX - 5 && x <= maxX + 5 && y >= minY - 5 && y <= maxY + 5;
   };
 
-  // Redraw logic
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = contextRef.current;
     if (!canvas || !context) return;
-    
-    // Clear canvas completely
+
     context.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     context.save();
     context.translate(panOffset.x, panOffset.y);
     context.scale(zoom, zoom);
 
-    // Draw all confirmed elements
     elements.forEach(el => drawElement(context, el));
-    
-    // Draw shape preview
+
     if (currentElement && activeTool !== 'pen' && activeTool !== 'highlighter' && activeTool !== 'eraser' && activeTool !== 'select' && activeTool !== 'pan') {
       drawElement(context, currentElement);
     }
 
-    // Draw active pen/highlighter path (eraser has no persisted path)
     if (isDrawing && (activeTool === 'pen' || activeTool === 'highlighter') && currentPathRef.current.length > 0) {
       const activePenElement = {
         tool: activeTool,
@@ -399,7 +387,6 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       drawElement(context, activePenElement);
     }
 
-    // Draw a live eraser cursor ring while erasing
     if (isDrawing && activeTool === 'eraser' && currentPathRef.current.length > 0) {
       const last = currentPathRef.current[currentPathRef.current.length - 1];
       const eraserRadius = (strokeWidth * 4) / zoom;
@@ -413,7 +400,6 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       context.restore();
     }
 
-    // Draw marquee select box
     if (isDrawingMarquee) {
       context.strokeStyle = '#0078d4';
       context.lineWidth = 1 / zoom;
@@ -428,23 +414,22 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       context.fill();
       context.stroke();
     }
-    
-    // Draw selection outlines
+
     if (selectedIds.length > 0 && activeTool === 'select') {
       const selectedElements = elements.filter(el => selectedIds.includes(el.id));
       drawSelectionBox(context, selectedElements);
     }
-    
+
     context.restore();
   }, [elements, currentElement, activeTool, selectedIds, isDrawing, color, strokeWidth, panOffset, zoom, isDrawingMarquee, marqueeStart, marqueeEnd]);
 
   const drawSelectionBox = (ctx, selectedElements) => {
     if (selectedElements.length === 0) return;
-    
+
     ctx.strokeStyle = '#0078d4';
     ctx.lineWidth = 1.5 / zoom;
     ctx.setLineDash([5 / zoom, 5 / zoom]);
-    
+
     if (selectedElements.length === 1) {
       const el = selectedElements[0];
       const bounds = getElementBounds(el);
@@ -452,22 +437,21 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       ctx.rect(bounds.minX - 5, bounds.minY - 5, (bounds.maxX - bounds.minX) + 10, (bounds.maxY - bounds.minY) + 10);
       ctx.stroke();
       ctx.setLineDash([]);
-      
-      // Draw corner resize handles
+
       if (el.tool === 'rect' || el.tool === 'sticky' || el.tool === 'circle' || el.tool === 'text') {
         const size = 8 / zoom;
         const half = size / 2;
         const corners = [
-          { x: bounds.minX - 5, y: bounds.minY - 5 }, // TL
-          { x: bounds.maxX + 5, y: bounds.minY - 5 }, // TR
-          { x: bounds.minX - 5, y: bounds.maxY + 5 }, // BL
-          { x: bounds.maxX + 5, y: bounds.maxY + 5 }  // BR
+          { x: bounds.minX - 5, y: bounds.minY - 5 },
+          { x: bounds.maxX + 5, y: bounds.minY - 5 },
+          { x: bounds.minX - 5, y: bounds.maxY + 5 },
+          { x: bounds.maxX + 5, y: bounds.maxY + 5 }
         ];
-        
+
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#0078d4';
         ctx.lineWidth = 1.5 / zoom;
-        
+
         corners.forEach(corner => {
           ctx.beginPath();
           ctx.rect(corner.x - half, corner.y - half, size, size);
@@ -480,7 +464,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       let overallMaxX = -Infinity;
       let overallMinY = Infinity;
       let overallMaxY = -Infinity;
-      
+
       selectedElements.forEach(el => {
         const bounds = getElementBounds(el);
         if (bounds.minX < overallMinX) overallMinX = bounds.minX;
@@ -488,7 +472,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         if (bounds.minY < overallMinY) overallMinY = bounds.minY;
         if (bounds.maxY > overallMaxY) overallMaxY = bounds.maxY;
       });
-      
+
       ctx.beginPath();
       ctx.rect(overallMinX - 8, overallMinY - 8, (overallMaxX - overallMinX) + 16, (overallMaxY - overallMinY) + 16);
       ctx.stroke();
@@ -499,23 +483,23 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   const drawStickyText = (ctx, text, startX, startY, width, height) => {
     ctx.fillStyle = (text && text.trim() !== '') ? '#323130' : '#8a8886';
     ctx.font = `16px 'Segoe UI', Inter, sans-serif`;
-    
+
     const content = (text && text.trim() !== '') ? text : "Double-click to edit";
     const words = content.split(' ');
     let lines = [];
     let currentLine = '';
     const maxWidth = width - 20;
-    
+
     for (let i = 0; i < words.length; i++) {
       let word = words[i];
       const wordWidth = ctx.measureText(word).width;
-      
+
       if (wordWidth > maxWidth) {
         if (currentLine) {
           lines.push(currentLine);
           currentLine = '';
         }
-        
+
         let remainingWord = word;
         while (remainingWord.length > 0) {
           let testWord = '';
@@ -544,11 +528,11 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         }
       }
     }
-    
+
     if (currentLine) {
       lines.push(currentLine);
     }
-    
+
     const lineHeight = 20;
     let y = startY + 24;
     for (let i = 0; i < lines.length; i++) {
@@ -561,24 +545,23 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   };
 
   const drawElement = (ctx, element) => {
-    const isEraser = false; // erasers are no longer stored as elements
+    const isEraser = false;
     let strokeColor = element.color;
-    
-    // Auto-invert black and white for readability on dark/light backgrounds
+
     if (isDarkBackground && strokeColor === '#000000') {
       strokeColor = '#ffffff';
     } else if (!isDarkBackground && strokeColor === '#ffffff') {
       strokeColor = '#000000';
     }
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     ctx.strokeStyle = strokeColor;
     ctx.fillStyle = strokeColor;
     ctx.lineWidth = element.strokeWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    
+
     ctx.globalAlpha = element.tool === 'highlighter' ? 0.4 : 1.0;
 
     if (element.tool === 'pen' || element.tool === 'highlighter' || element.tool === 'eraser') {
@@ -615,9 +598,9 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       ctx.shadowOffsetY = 4;
       ctx.fillRect(element.startX, element.startY, element.width, element.height);
       ctx.shadowColor = 'transparent';
-      
+
       drawStickyText(ctx, element.text, element.startX, element.startY, element.width, element.height);
-      
+
     } else if (element.tool === 'circle') {
       ctx.beginPath();
       const radius = Math.sqrt(Math.pow(element.width, 2) + Math.pow(element.height, 2));
@@ -630,7 +613,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       const endY = element.startY + element.height;
       ctx.lineTo(endX, endY);
       ctx.stroke();
-      
+
       if (element.tool === 'arrow') {
         const angle = Math.atan2(endY - element.startY, endX - element.startX);
         const arrowLength = Math.max(12, element.strokeWidth * 3);
@@ -652,7 +635,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       ctx.font = `${element.strokeWidth * 4 + 12}px 'Segoe UI', Inter, sans-serif`;
       ctx.fillText(element.text || '', element.startX, element.startY);
     }
-    
+
     ctx.globalAlpha = 1.0;
   };
 
@@ -663,7 +646,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     socket.on('update-element', (payload) => dispatch(updateElement(payload)));
     socket.on('delete-element', (id) => dispatch(deleteElement(id)));
     socket.on('clear', () => dispatch(clearBoard()));
-    
+
     socket.on('cursor-move', (data) => {
       setCursors(prev => ({ ...prev, [data.socketId]: data }));
     });
@@ -679,12 +662,12 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
 
   const getSelectionScreenBounds = (ids) => {
     if (ids.length === 0) return null;
-    
+
     let overallMinX = Infinity;
     let overallMaxX = -Infinity;
     let overallMinY = Infinity;
     let overallMaxY = -Infinity;
-    
+
     ids.forEach(id => {
       const el = elements.find(e => e.id === id);
       if (el) {
@@ -695,9 +678,9 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         if (bounds.maxY > overallMaxY) overallMaxY = bounds.maxY;
       }
     });
-    
+
     if (overallMinX === Infinity) return null;
-    
+
     return {
       left: overallMinX * zoom + panOffset.x,
       top: overallMinY * zoom + panOffset.y,
@@ -714,7 +697,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       if (el) {
         const newId = uuidv4();
         newIds.push(newId);
-        
+
         const duplicated = {
           ...el,
           id: newId,
@@ -722,7 +705,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
           startY: el.startY !== undefined ? el.startY + 20 : undefined,
           points: el.points ? el.points.map(p => ({ x: p.x + 20, y: p.y + 20 })) : undefined
         };
-        
+
         dispatch(addElement(duplicated));
         if (socket && roomId) {
           socket.emit('draw', { roomId, element: duplicated });
@@ -753,11 +736,10 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     });
   };
 
-  // Keyboard shortcuts for selected element
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      
+
       if (activeTool === 'select' && selectedIds.length > 0) {
         if (e.key === 'Delete' || e.key === 'Backspace') {
           e.preventDefault();
@@ -767,7 +749,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
           handleDuplicate(selectedIds);
         }
       }
-      
+
       if (activeTool === 'select') {
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
           e.preventDefault();
@@ -775,51 +757,51 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         }
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTool, selectedIds, elements]);
 
   const handleResizeMove = (worldCoords) => {
     if (!initialResizeState.current) return;
-    
+
     const { element: initialEl, handle, startCoords } = initialResizeState.current;
     const dx = worldCoords.x - startCoords.x;
     const dy = worldCoords.y - startCoords.y;
-    
+
     let startX = initialEl.startX;
     let startY = initialEl.startY;
     let width = initialEl.width;
     let height = initialEl.height;
-    
+
     const minSize = 15;
-    
+
     if (initialEl.tool === 'text') {
       const initialFontSize = initialEl.strokeWidth * 4 + 12;
       let newFontSize = initialFontSize;
-      
+
       if (handle === 'BR' || handle === 'BL') {
         newFontSize = Math.max(12, initialFontSize + dy);
       } else if (handle === 'TR' || handle === 'TL') {
         newFontSize = Math.max(12, initialFontSize - dy);
       }
-      
+
       const newStrokeWidth = Math.max(1, Math.round((newFontSize - 12) / 4));
       const actualNewFontSize = newStrokeWidth * 4 + 12;
-      
+
       let startX = initialEl.startX;
       let startY = initialEl.startY;
-      
+
       if (handle === 'BR' || handle === 'BL') {
         startY = initialEl.startY - initialFontSize + actualNewFontSize;
       }
-      
+
       if (handle === 'BL' || handle === 'TL') {
         const initialWidth = getTextWidth(initialEl.text, initialEl.strokeWidth);
         const newWidth = getTextWidth(initialEl.text, newStrokeWidth);
         startX = initialEl.startX + initialWidth - newWidth;
       }
-      
+
       const updates = { strokeWidth: newStrokeWidth, startX, startY };
       dispatch(updateElement({ id: initialEl.id, updates }));
       if (socket) {
@@ -827,7 +809,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       }
       return;
     }
-    
+
     if (initialEl.tool === 'circle') {
       const dist = Math.hypot(worldCoords.x - initialEl.startX, worldCoords.y - initialEl.startY);
       const newRadius = Math.max(minSize, dist);
@@ -838,7 +820,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       }
       return;
     }
-    
+
     if (handle === 'BR') {
       width = Math.max(minSize, initialEl.width + dx);
       height = Math.max(minSize, initialEl.height + dy);
@@ -868,7 +850,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       }
       height = Math.max(minSize, initialEl.height + dy);
     }
-    
+
     const updates = { startX, startY, width, height };
     dispatch(updateElement({ id: initialEl.id, updates }));
     if (socket) {
@@ -879,7 +861,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   const handlePointerMove = (e) => {
     const { clientX, clientY } = e;
     const worldCoords = getWorldCoordinates(clientX, clientY);
-    
+
     if (socket && roomId) {
       socket.emit('cursor-move', { roomId, socketId: socket.id, x: worldCoords.x, y: worldCoords.y, color: userColor, username });
     }
@@ -893,7 +875,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       const dx = worldCoords.x - dragOffset.current.x;
       const dy = worldCoords.y - dragOffset.current.y;
       console.log('Dragging selection:', { dx, dy, count: Object.keys(dragStartPositions.current).length });
-      
+
       Object.entries(dragStartPositions.current).forEach(([id, startPos]) => {
         let updates = {};
         if (startPos.points) {
@@ -916,12 +898,12 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
 
     if (isDrawingMarquee) {
       setMarqueeEnd(worldCoords);
-      
+
       const x1 = Math.min(marqueeStart.x, worldCoords.x);
       const x2 = Math.max(marqueeStart.x, worldCoords.x);
       const y1 = Math.min(marqueeStart.y, worldCoords.y);
       const y2 = Math.max(marqueeStart.y, worldCoords.y);
-      
+
       const intersectedIds = [];
       elements.forEach(el => {
         const bounds = getElementBounds(el);
@@ -935,7 +917,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     }
 
     if (!isDrawing) {
-      // Set cursor based on resize handles hover
+
       if (activeTool === 'select' && selectedIds.length === 1 && !isDraggingRef.current && !isResizingRef.current && !isDrawingMarquee) {
         const el = elements.find(e => e.id === selectedIds[0]);
         if (el && (el.tool === 'rect' || el.tool === 'sticky' || el.tool === 'circle' || el.tool === 'text')) {
@@ -947,7 +929,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
             BL: { x: bounds.minX - 5, y: bounds.maxY + 5 },
             BR: { x: bounds.maxX + 5, y: bounds.maxY + 5 }
           };
-          
+
           let foundHandle = null;
           for (const [name, pos] of Object.entries(corners)) {
             if (Math.abs(worldCoords.x - pos.x) <= handleSize &&
@@ -975,13 +957,13 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     }
 
     if (activeTool === 'eraser') {
-      // Eraser deletes elements it touches — find any element within eraser radius
+
       const eraserRadius = strokeWidth * 4;
       const eraserX = worldCoords.x;
       const eraserY = worldCoords.y;
 
       const toDelete = elements.filter(el => {
-        if (el.tool === 'eraser') return false; // never delete old eraser strokes if any linger
+        if (el.tool === 'eraser') return false;
         return isPointInElement(el, eraserX, eraserY) ||
           (el.points && el.points.some(p => Math.hypot(p.x - eraserX, p.y - eraserY) <= eraserRadius));
       });
@@ -991,7 +973,6 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         if (socket && roomId) socket.emit('delete-element', { roomId, id: el.id });
       });
 
-      // Track path for the live eraser cursor ring
       currentPathRef.current.push({ x: eraserX, y: eraserY });
       return;
     }
@@ -1034,7 +1015,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       } else if (el.tool === 'text') {
         const textWidth = getTextWidth(el.text, el.strokeWidth);
         const fontSize = el.strokeWidth * 4 + 12;
-        return worldCoords.x >= el.startX && worldCoords.x <= el.startX + textWidth && 
+        return worldCoords.x >= el.startX && worldCoords.x <= el.startX + textWidth &&
                worldCoords.y >= el.startY - fontSize && worldCoords.y <= el.startY;
       }
       return false;
@@ -1068,11 +1049,11 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
 
     if (activeTool === 'text' || activeTool === 'sticky') {
       if (textInput.visible) handleTextSubmit();
-      
-      setTextInput({ 
-        visible: true, 
-        x: worldCoords.x, 
-        y: worldCoords.y, 
+
+      setTextInput({
+        visible: true,
+        x: worldCoords.x,
+        y: worldCoords.y,
         id: uuidv4(),
         isSticky: activeTool === 'sticky',
         isEditingExisting: false,
@@ -1086,7 +1067,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     }
 
     if (activeTool === 'select') {
-      // 1. Check if clicked a resize handle
+
       if (selectedIds.length === 1) {
         const el = elements.find(e => e.id === selectedIds[0]);
         if (el && (el.tool === 'rect' || el.tool === 'sticky' || el.tool === 'circle' || el.tool === 'text')) {
@@ -1098,7 +1079,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
             BL: { x: bounds.minX - 5, y: bounds.maxY + 5 },
             BR: { x: bounds.maxX + 5, y: bounds.maxY + 5 }
           };
-          
+
           let handleFound = null;
           for (const [name, pos] of Object.entries(corners)) {
             if (Math.abs(worldCoords.x - pos.x) <= handleSize &&
@@ -1107,7 +1088,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
               break;
             }
           }
-          
+
           if (handleFound) {
             console.log('Resize handle clicked:', handleFound);
             dispatch(saveHistoryState());
@@ -1123,32 +1104,31 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         }
       }
 
-      // 2. Check if clicked directly on any shape first
       const clickedShape = [...elements].reverse().find(el => isPointInElement(el, worldCoords.x, worldCoords.y));
-      
+
       let clicked = null;
       let isInsideSelectionBox = false;
-      
+
       if (clickedShape) {
         clicked = clickedShape;
       } else {
-        // Clicked outside any shape, check if inside selection bounding box (empty space of selection)
+
         const isInsideSelection = isPointInSelectionBounds(worldCoords.x, worldCoords.y, selectedIds);
         if (isInsideSelection) {
           clicked = elements.find(el => selectedIds.includes(el.id));
           isInsideSelectionBox = true;
         }
       }
-      
+
       console.log('Select pointer down. clickedShape:', clickedShape, 'isInsideSelectionBox:', isInsideSelectionBox);
 
       if (clicked) {
         let newSelection = [...selectedIds];
-        
+
         if (isInsideSelectionBox) {
-          // Keep current selection
+
         } else {
-          // Clicked directly on a shape: select/toggle it
+
           if (e.shiftKey) {
             if (selectedIds.includes(clicked.id)) {
               newSelection = selectedIds.filter(id => id !== clicked.id);
@@ -1161,21 +1141,18 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
             }
           }
         }
-        
+
         setSelectedIds(newSelection);
         dispatch(saveHistoryState());
         isDraggingRef.current = true;
         setIsDragging(true);
         dragOffset.current = { x: worldCoords.x, y: worldCoords.y };
 
-        // Populate initial positions for delta dragging
         const startPos = {};
         newSelection.forEach(id => {
           const el = elements.find(e => e.id === id);
           if (el) {
-            // Only treat as path/points element if it is a pen/highlighter/eraser!
-            // Other shapes (rect, circle, line, arrow, text, sticky) have a points array 
-            // initialized on creation but must be dragged via startX and startY!
+
             if (el.tool === 'pen' || el.tool === 'highlighter' || el.tool === 'eraser') {
               startPos[id] = { points: el.points.map(p => ({ ...p })) };
             } else {
@@ -1186,7 +1163,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         dragStartPositions.current = startPos;
         console.log('Started dragging selection:', newSelection, 'Start positions:', startPos);
       } else {
-        // Clicking empty space
+
         console.log('Clicked empty space, starting marquee select');
         if (!e.shiftKey) {
           setSelectedIds([]);
@@ -1199,7 +1176,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     }
 
     setIsDrawing(true);
-    
+
     if (activeTool === 'pen' || activeTool === 'highlighter' || activeTool === 'eraser') {
       currentPathRef.current = [{ x: worldCoords.x, y: worldCoords.y }];
       const context = contextRef.current;
@@ -1252,7 +1229,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     setIsDrawing(false);
 
     if (activeTool === 'eraser') {
-      // Eraser works in real-time during move; just clear the path on up
+
       currentPathRef.current = [];
       return;
     }
@@ -1273,8 +1250,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
 
     if (currentElement && activeTool !== 'text' && activeTool !== 'sticky') {
       let elementToSave = currentElement;
-      
-      // Normalize rectangle dimensions on drawing completion
+
       if (currentElement.tool === 'rect') {
         const x = Math.min(currentElement.startX, currentElement.startX + currentElement.width);
         const y = Math.min(currentElement.startY, currentElement.startY + currentElement.height);
@@ -1282,7 +1258,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         const h = Math.abs(currentElement.height);
         elementToSave = { ...currentElement, startX: x, startY: y, width: w, height: h };
       }
-      
+
       dispatch(addElement(elementToSave));
       if (socket && roomId) {
         socket.emit('draw', { roomId, element: elementToSave });
@@ -1308,7 +1284,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
           const newTextElement = {
             id: textInput.id,
             tool: textInput.isSticky ? 'sticky' : 'text',
-            color: textInput.isSticky ? '#fef08a' : color, // Default yellow sticky
+            color: textInput.isSticky ? '#fef08a' : color,
             strokeWidth,
             startX: textInput.x,
             startY: textInput.y,
@@ -1324,10 +1300,10 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         }
       }
     }
-    
+
     dispatch(setActiveTool('select'));
     setTextInput({ visible: false, x: 0, y: 0, id: null, isSticky: false, isEditingExisting: false, text: '' });
-    
+
     setTimeout(() => {
       isCommittingRef.current = false;
     }, 50);
@@ -1338,7 +1314,6 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     handlePointerUpRef.current = handlePointerUp;
   }, [handlePointerUp]);
 
-  // Global pointer up listener to handle releases anywhere (e.g. outside window, over overlays)
   useEffect(() => {
     const handleGlobalPointerUp = () => {
       if (isDraggingRef.current || isResizingRef.current || isDrawingMarquee || isDrawing) {
@@ -1349,32 +1324,29 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
   }, [isDrawingMarquee, isDrawing]);
 
-  // Export helper attached to the ref to support exporting with backgrounds
   useEffect(() => {
     if (forwardRef && forwardRef.current) {
       forwardRef.current.exportWithBg = () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        
+
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = canvas.width;
         tempCanvas.height = canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
-        
-        // 1. Fill background color
+
         tempCtx.fillStyle = currentBg.canvasColor;
         tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // 2. Draw background pattern
+
         tempCtx.save();
-        
+
         if (currentBg.id.includes('dots')) {
           const dotColor = currentBg.id.includes('dark') ? '#484644' : '#d2d0ce';
           tempCtx.fillStyle = dotColor;
           const spacing = 20 * zoom;
           const startX = panOffset.x % spacing;
           const startY = panOffset.y % spacing;
-          
+
           for (let x = startX; x < tempCanvas.width; x += spacing) {
             for (let y = startY; y < tempCanvas.height; y += spacing) {
               tempCtx.beginPath();
@@ -1389,14 +1361,14 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
           const spacing = 20 * zoom;
           const startX = panOffset.x % spacing;
           const startY = panOffset.y % spacing;
-          
+
           for (let x = startX; x < tempCanvas.width; x += spacing) {
             tempCtx.beginPath();
             tempCtx.moveTo(x, 0);
             tempCtx.lineTo(x, tempCanvas.height);
             tempCtx.stroke();
           }
-          
+
           for (let y = startY; y < tempCanvas.height; y += spacing) {
             tempCtx.beginPath();
             tempCtx.moveTo(0, y);
@@ -1409,7 +1381,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
           tempCtx.lineWidth = 1;
           const spacing = 24 * zoom;
           const startY = panOffset.y % spacing;
-          
+
           for (let y = startY; y < tempCanvas.height; y += spacing) {
             tempCtx.beginPath();
             tempCtx.moveTo(0, y);
@@ -1417,13 +1389,11 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
             tempCtx.stroke();
           }
         }
-        
+
         tempCtx.restore();
-        
-        // 3. Draw the main canvas contents
+
         tempCtx.drawImage(canvas, 0, 0);
-        
-        // 4. Trigger download
+
         const dataUrl = tempCanvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.download = 'whiteboard-export.png';
@@ -1447,11 +1417,11 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   };
 
   const backgroundPosition = `${panOffset.x}px ${panOffset.y}px`;
-  
+
   return (
-    <div 
+    <div
       className="absolute inset-0 w-full h-full transition-colors duration-300"
-      style={{ 
+      style={{
         backgroundPosition,
         backgroundColor: currentBg.canvasColor,
         backgroundImage: currentBg.canvasImage,
@@ -1465,8 +1435,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         onDoubleClick={handleDoubleClick}
         className={`touch-none w-full h-full absolute inset-0 ${getCursorStyle()}`}
       />
-      
-      {/* Text Input Layer */}
+
       {textInput.visible && (
         textInput.isSticky ? (
           <textarea
@@ -1528,30 +1497,29 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         )
       )}
 
-      {/* Floating Action Menu for Selected Elements */}
       {selectedIds.length > 0 && activeTool === 'select' && (() => {
         const bounds = getSelectionScreenBounds(selectedIds);
         if (!bounds) return null;
-        
+
         const firstEl = elements.find(el => el.id === selectedIds[0]);
         if (!firstEl) return null;
         const elColor = firstEl.color;
-        
+
         const allStickies = selectedIds.every(id => {
           const el = elements.find(e => e.id === id);
           return el && el.tool === 'sticky';
         });
-        
-        const menuColors = allStickies 
+
+        const menuColors = allStickies
           ? ['#fef08a', '#bbf7d0', '#bfdbfe', '#fbcfe8', '#ffffff']
           : ['#000000', '#0078d4', '#e81123', '#ffb900', '#107c10', '#b4009e', '#008272'];
-        
+
         const menuWidth = 240;
         const menuLeft = Math.max(10, bounds.left + (bounds.width / 2) - (menuWidth / 2));
         const menuTop = Math.max(10, bounds.top - 55);
-        
+
         return (
-          <div 
+          <div
             style={{
               position: 'absolute',
               left: `${menuLeft}px`,
@@ -1559,8 +1527,8 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
               pointerEvents: 'auto'
             }}
             className={`flex items-center gap-2.5 rounded-xl shadow-lg border backdrop-blur-md px-3 py-1.5 z-50 transition-all duration-300 ${
-              isDarkBackground 
-                ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/30' 
+              isDarkBackground
+                ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/30'
                 : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/30'
             }`}
           >
@@ -1579,7 +1547,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
                 />
               ))}
             </div>
-            
+
             <button
               onClick={() => handleDuplicate(selectedIds)}
               className={`p-1.5 rounded-lg transition-colors ${
@@ -1589,7 +1557,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
             >
               <Copy size={16} />
             </button>
-            
+
             <button
               onClick={() => handleDelete(selectedIds)}
               className={`p-1.5 rounded-lg transition-colors ${
@@ -1603,13 +1571,12 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         );
       })()}
 
-      {/* Zoom Controls */}
       <div className={`absolute bottom-6 right-6 rounded-xl px-2 py-1.5 flex items-center gap-2.5 z-20 select-none shadow-md border backdrop-blur-md transition-all duration-300 ${
-        isDarkBackground 
-          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
+        isDarkBackground
+          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20'
           : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
       }`}>
-        <button 
+        <button
           onClick={() => {
             const newZoom = Math.max(zoom / 1.2, 0.2);
             const mouseX = window.innerWidth / 2;
@@ -1626,7 +1593,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         >
           -
         </button>
-        <button 
+        <button
           onClick={() => {
             setZoom(1);
             dispatch(setPanOffset({ x: 0, y: 0 }));
@@ -1638,7 +1605,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         >
           {Math.round(zoom * 100)}%
         </button>
-        <button 
+        <button
           onClick={() => {
             const newZoom = Math.min(zoom * 1.2, 5);
             const mouseX = window.innerWidth / 2;
@@ -1657,10 +1624,9 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         </button>
       </div>
 
-      {/* Background Selector */}
       <div className={`absolute bottom-6 left-6 rounded-xl px-3 py-2 flex items-center gap-2.5 z-20 select-none shadow-md border backdrop-blur-md transition-all duration-300 ${
-        isDarkBackground 
-          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
+        isDarkBackground
+          ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20'
           : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
       }`}>
         <span className={`text-[10px] font-bold uppercase tracking-wider mr-1 select-none ${
@@ -1675,8 +1641,8 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
               onClick={() => dispatch(setBackgroundType(bg.id))}
               style={bg.previewStyle}
               className={`w-6 h-6 rounded-md border transition-all hover:scale-110 cursor-pointer ${
-                backgroundType === bg.id 
-                  ? 'border-primary ring-1 ring-primary/30 scale-105 shadow-sm' 
+                backgroundType === bg.id
+                  ? 'border-primary ring-1 ring-primary/30 scale-105 shadow-sm'
                   : (isDarkBackground ? 'border-neutral-800 hover:border-neutral-700' : 'border-gray-200 hover:border-gray-300')
               }`}
               title={bg.name}
@@ -1685,9 +1651,8 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         </div>
       </div>
 
-      {/* Cursors Layer */}
       {Object.values(cursors).map(cursor => (
-        <div 
+        <div
           key={cursor.socketId}
           className="absolute pointer-events-none z-40 transition-all duration-75 ease-linear"
           style={{ transform: `translate(${cursor.x * zoom + panOffset.x}px, ${cursor.y * zoom + panOffset.y}px)` }}

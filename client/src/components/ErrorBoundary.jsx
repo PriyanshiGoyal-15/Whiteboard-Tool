@@ -1,9 +1,5 @@
 import React from 'react';
 
-/**
- * Production Error Boundary — catches rendering errors in the component tree
- * and shows a user-friendly fallback instead of crashing the whole app.
- */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -15,7 +11,6 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // In production you'd send this to Sentry / LogRocket / etc.
     console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
   }
 

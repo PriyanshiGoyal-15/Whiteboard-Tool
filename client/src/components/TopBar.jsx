@@ -60,7 +60,6 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
           : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
       }`}
     >
-      {/* Brand + Connection Status */}
       <div className={`flex items-center gap-2 mr-2 border-r pr-4 ${
         isDarkBackground ? 'border-neutral-800' : 'border-gray-200'
       }`}>
