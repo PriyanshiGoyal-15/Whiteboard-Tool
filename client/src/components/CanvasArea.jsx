@@ -1078,16 +1078,53 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       const eraserX = worldCoords.x;
       const eraserY = worldCoords.y;
 
-      const toDelete = elements.filter(el => {
-        if (el.tool === 'eraser') return false;
-        return isPointInElement(el, eraserX, eraserY) ||
-          (el.points && el.points.some(p => Math.hypot(p.x - eraserX, p.y - eraserY) <= eraserRadius));
+      const elementsToDelete = [];
+      const elementsToAdd = [];
+
+      elements.forEach(el => {
+        if (['rect', 'circle', 'sticky', 'text'].includes(el.tool)) return;
+        if (el.tool === 'eraser') return;
+
+        if (el.points && el.points.length > 0) {
+          let currentSegment = [];
+          let hasErased = false;
+
+          el.points.forEach(p => {
+            if (Math.hypot(p.x - eraserX, p.y - eraserY) <= eraserRadius) {
+              hasErased = true;
+              if (currentSegment.length > 0) {
+                elementsToAdd.push({ ...el, id: uuidv4(), points: currentSegment });
+                currentSegment = [];
+              }
+            } else {
+              currentSegment.push(p);
+            }
+          });
+
+          if (hasErased) {
+            elementsToDelete.push(el);
+            if (currentSegment.length > 0) {
+              elementsToAdd.push({ ...el, id: uuidv4(), points: currentSegment });
+            }
+          }
+        } else if (isPointInElement(el, eraserX, eraserY)) {
+          elementsToDelete.push(el);
+        }
       });
 
-      toDelete.forEach(el => {
-        dispatch(deleteElement(el.id));
-        if (socket && roomId) socket.emit('delete-element', { roomId, id: el.id });
-      });
+      if (elementsToDelete.length > 0 || elementsToAdd.length > 0) {
+        const toDeleteIds = new Set(elementsToDelete.map(e => e.id));
+        const newElements = elements.filter(el => !toDeleteIds.has(el.id)).concat(elementsToAdd);
+        
+        dispatch(setElements(newElements));
+
+        elementsToDelete.forEach(el => {
+          if (socket && roomId) socket.emit('delete-element', { roomId, id: el.id });
+        });
+        elementsToAdd.forEach(el => {
+          if (socket && roomId) socket.emit('add-element', { roomId, element: el });
+        });
+      }
 
       currentPathRef.current.push({ x: eraserX, y: eraserY });
       return;
@@ -1370,7 +1407,9 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     setIsDrawing(false);
 
     if (activeTool === 'eraser') {
-
+      if (currentPathRef.current.length > 0) {
+        dispatch(saveHistoryState());
+      }
       currentPathRef.current = [];
       return;
     }
