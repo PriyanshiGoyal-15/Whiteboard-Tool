@@ -14,7 +14,29 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 let ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 if (ALLOWED_ORIGIN.endsWith('/')) ALLOWED_ORIGIN = ALLOWED_ORIGIN.slice(0, -1);
-app.use(cors({ origin: ALLOWED_ORIGIN, methods: ['GET', 'POST'] }));
+
+const parsedAllowedOrigins = ALLOWED_ORIGIN.split(',').map(o => o.trim());
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (parsedAllowedOrigins.includes(origin)) return true;
+  if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/whiteboard-tool-frontend(-[a-zA-Z0-9-]+)?\.vercel\.app$/.test(origin)) return true;
+  return false;
+};
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  methods: ['GET', 'POST']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
 // Health check endpoint
@@ -24,10 +46,7 @@ const server = http.createServer(app);
 
 // ─── Socket.io ──────────────────────────────────────────────────────────────
 const io = new Server(server, {
-  cors: {
-    origin: ALLOWED_ORIGIN,
-    methods: ['GET', 'POST']
-  },
+  cors: corsOptions,
   // Graceful reconnect — don't drop connection on brief network blip
   pingTimeout: 60000,
   pingInterval: 25000
