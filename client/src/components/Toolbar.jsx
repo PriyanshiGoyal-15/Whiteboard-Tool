@@ -43,7 +43,7 @@ const Toolbar = () => {
 
   return (
     <div 
-      className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-4"
+      className="absolute bottom-2 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-4"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
