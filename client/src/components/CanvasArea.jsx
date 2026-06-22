@@ -1220,18 +1220,39 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     if (activeTool === 'text' || activeTool === 'sticky') {
       if (textInput.visible) handleTextSubmit();
 
-      setTextInput({
-        visible: true,
-        x: worldCoords.x,
-        y: worldCoords.y,
-        id: uuidv4(),
-        isSticky: activeTool === 'sticky',
-        isEditingExisting: false,
-        text: '',
-        width: undefined,
-        strokeWidth: strokeWidth,
-        color: color
+      const clicked = [...elements].reverse().find(el => {
+        if (el.tool !== 'sticky' && el.tool !== 'text') return false;
+        return isPointInElement(el, worldCoords.x, worldCoords.y);
       });
+
+      if (clicked) {
+        setSelectedIds([]);
+        setTextInput({
+          visible: true,
+          x: clicked.startX,
+          y: clicked.startY,
+          id: clicked.id,
+          isSticky: clicked.tool === 'sticky',
+          isEditingExisting: true,
+          text: clicked.text,
+          width: clicked.width,
+          strokeWidth: clicked.strokeWidth,
+          color: clicked.color
+        });
+      } else {
+        setTextInput({
+          visible: true,
+          x: worldCoords.x,
+          y: worldCoords.y,
+          id: uuidv4(),
+          isSticky: activeTool === 'sticky',
+          isEditingExisting: false,
+          text: '',
+          width: undefined,
+          strokeWidth: strokeWidth,
+          color: color
+        });
+      }
       return;
     }
 
