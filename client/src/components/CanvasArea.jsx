@@ -1859,7 +1859,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
       </div>
 
       <div 
-        className={`absolute top-[80px] sm:top-auto sm:bottom-6 left-4 sm:left-6 rounded-xl px-3 py-2 flex items-center gap-2.5 z-40 select-none shadow-md border backdrop-blur-md transition-all duration-300 ${
+        className={`absolute bottom-24 sm:top-auto sm:bottom-6 left-4 sm:left-6 rounded-xl px-3 py-2 flex items-center gap-2.5 z-40 select-none shadow-md border backdrop-blur-md transition-all duration-300 ${
           isDarkBackground ? 'bg-neutral-900/80 border-neutral-800 text-neutral-300' : 'bg-white/80 border-gray-200 text-gray-700'
         }`}
         onPointerDown={(e) => e.stopPropagation()}

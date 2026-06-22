@@ -43,7 +43,7 @@ const Toolbar = () => {
 
   return (
     <div 
-      className="absolute bottom-2 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center gap-4"
+      className="absolute bottom-2 sm:bottom-6 left-0 right-0 px-2 sm:px-0 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-40 flex flex-col items-center gap-4"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -65,7 +65,7 @@ const Toolbar = () => {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`rounded-2xl px-2 sm:px-4 py-2 flex flex-col items-center justify-end border backdrop-blur-md transition-all duration-300 w-[calc(100vw-32px)] sm:w-auto max-w-[600px] ${
+        className={`rounded-2xl px-2 sm:px-4 py-2 flex flex-col items-center justify-end border backdrop-blur-md transition-all duration-300 w-full sm:w-auto max-w-[600px] mx-auto ${
           isDarkBackground 
             ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
             : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
@@ -138,7 +138,7 @@ const Toolbar = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 w-full justify-center flex-wrap">
+        <div className="flex items-center gap-1 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {TOOLS.map((tool) => {
             const Icon = tool.icon;
             const isActive = activeTool === tool.id;
@@ -148,7 +148,7 @@ const Toolbar = () => {
                 whileTap={{ scale: 0.95 }}
                 key={tool.id}
                 onClick={() => dispatch(setActiveTool(tool.id))}
-                className={`p-2.5 rounded-xl flex flex-col items-center justify-center transition-all relative group ${
+                className={`p-2.5 rounded-xl flex-shrink-0 flex flex-col items-center justify-center transition-all relative group ${
                   isActive 
                     ? (isDarkBackground ? 'bg-blue-950/40 text-primary shadow-sm ring-1 ring-primary/30' : 'bg-blue-50 text-primary shadow-sm ring-1 ring-primary/20') 
                     : (isDarkBackground ? 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
