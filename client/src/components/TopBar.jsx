@@ -64,12 +64,14 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
       <div className={`flex items-center gap-2 mr-2 border-r pr-4 ${
         isDarkBackground ? 'border-neutral-800' : 'border-gray-200'
       }`}>
-        <Users size={18} className="text-primary" />
-        <h1 className={`text-md font-semibold tracking-wide ${
-          isDarkBackground ? 'text-neutral-100' : 'text-gray-800'
-        }`}>
-          Study<span className="text-primary">Board</span>
-        </h1>
+        <a href="/" title="Return to Lobby" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity no-underline">
+          <Users size={18} className="text-primary" />
+          <h1 className={`text-md font-semibold tracking-wide m-0 ${
+            isDarkBackground ? 'text-neutral-100' : 'text-gray-800'
+          }`}>
+            Study<span className="text-primary">Board</span>
+          </h1>
+        </a>
         <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'}`} />
         <ConnectionBadge status={connectionStatus} isDark={isDarkBackground} />
 
@@ -108,7 +110,7 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
             history.length === 0 
               ? (isDarkBackground ? 'text-neutral-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed') 
               : (isDarkBackground ? 'text-neutral-300 hover:text-neutral-100' : 'text-gray-600 hover:text-gray-900')
-          }`}
+          }`} 
           title="Undo (Ctrl+Z)"
         >
           <Undo2 size={18} />

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, ArrowRight, ArrowLeft, AlertCircle, Loader2, Paintbrush } from 'lucide-react';
+import { Users, ArrowRight, ArrowLeft, AlertCircle, Loader2, PenTool, Sparkles } from 'lucide-react';
 
 const ADJECTIVES = ['swift', 'silent', 'bright', 'clever', 'gentle', 'daring', 'epic', 'jolly', 'magic', 'mystic'];
 const COLORS = ['blue', 'amber', 'crimson', 'emerald', 'indigo', 'violet', 'golden', 'rose', 'slate', 'teal'];
 const NOUNS = ['fox', 'panda', 'koala', 'falcon', 'otter', 'badger', 'panther', 'eagle', 'tiger', 'sketch'];
 
 const AVATAR_COLORS = [
-  '#2563eb', // Blue
-  '#7c3aed', // Violet
-  '#db2777', // Pink
-  '#ea580c', // Orange
-  '#16a34a', // Green
-  '#0d9488', // Teal
+  '#3b82f6', // Blue
+  '#8b5cf6', // Violet
+  '#ec4899', // Pink
+  '#f97316', // Orange
+  '#22c55e', // Green
+  '#14b8a6', // Teal
   '#eab308'  // Yellow
 ];
 
@@ -24,25 +24,47 @@ const generateRandomRoomId = () => {
 };
 
 const slugify = (text) => {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+  return text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
 };
 
+const BackgroundOrbs = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <motion.div
+      animate={{
+        x: [0, 100, 0],
+        y: [0, -100, 0],
+        scale: [1, 1.2, 1],
+      }}
+      transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+      className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/30 rounded-full blur-[100px]"
+    />
+    <motion.div
+      animate={{
+        x: [0, -150, 0],
+        y: [0, 150, 0],
+        scale: [1, 1.5, 1],
+      }}
+      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-teal-500/20 rounded-full blur-[120px]"
+    />
+    <motion.div
+      animate={{
+        x: [0, 50, -50, 0],
+        y: [0, 50, 0],
+        scale: [1, 1.1, 1],
+      }}
+      transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-rose-500/20 rounded-full blur-[90px]"
+    />
+  </div>
+);
+
 const Lobby = ({ onJoin }) => {
-  const [step, setStep] = useState(1); // 1: Profile setup, 2: Session options
+  const [step, setStep] = useState(1);
   const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
   const [selectedColor, setSelectedColor] = useState(() => localStorage.getItem('userColor') || AVATAR_COLORS[0]);
-  
   const [boardName, setBoardName] = useState('');
   const [roomIdInput, setRoomIdInput] = useState('');
-  
   const [randomPlaceholder, setRandomPlaceholder] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,14 +80,8 @@ const Lobby = ({ onJoin }) => {
   const handleNextStep = (e) => {
     e.preventDefault();
     setError('');
-    if (!username.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-    if (username.length > 20) {
-      setError('Name must be 20 characters or less');
-      return;
-    }
+    if (!username.trim()) { setError('Please enter your name'); return; }
+    if (username.length > 20) { setError('Name must be 20 characters or less'); return; }
     localStorage.setItem('username', username.trim());
     localStorage.setItem('userColor', selectedColor);
     setStep(2);
@@ -74,18 +90,10 @@ const Lobby = ({ onJoin }) => {
   const handleSubmit = async (e, type) => {
     e.preventDefault();
     setError('');
-
     if (type === 'create') {
       const name = boardName.trim() ? slugify(boardName) : randomPlaceholder;
-      if (!name) {
-        setError('Please enter a valid board name');
-        return;
-      }
-      if (name.length > 64) {
-        setError('Board name must be 64 characters or less');
-        return;
-      }
-
+      if (!name) { setError('Please enter a valid board name'); return; }
+      if (name.length > 64) { setError('Board name must be 64 characters or less'); return; }
       setLoading(true);
       try {
         const serverUrl = import.meta.env.VITE_SERVER_URL || '';
@@ -98,87 +106,92 @@ const Lobby = ({ onJoin }) => {
             return;
           }
         }
-      } catch (err) {
-        console.warn('Backend offline:', err.message);
-      }
+      } catch (err) { console.warn('Backend offline:', err.message); }
       setLoading(false);
       onJoin({ username: username.trim(), roomId: name, color: selectedColor });
     } else {
       const targetRoom = slugify(roomIdInput);
-      if (!targetRoom) {
-        setError('Please enter a valid Board Name or ID');
-        return;
-      }
+      if (!targetRoom) { setError('Please enter a valid Board Name or ID'); return; }
       onJoin({ username: username.trim(), roomId: targetRoom, color: selectedColor });
     }
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col md:flex-row bg-white text-slate-900 font-sans selection:bg-slate-200">
+    <div className="relative w-full min-h-screen flex items-center justify-center bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-hidden">
+      <BackgroundOrbs />
       
-      {/* Left Column: Minimalist Introduction & How it Works */}
-      <div className="flex-1 flex flex-col justify-center p-10 md:p-16 lg:p-24 bg-slate-50/50 border-r border-slate-100">
-        <div className="max-w-md w-full mx-auto">
-          
-          <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mb-8 shadow-sm">
-            <Users className="text-white" size={20} />
+      <div className="relative z-10 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-8 items-center justify-center min-h-[600px]">
+        
+        {/* Left Pane - Glass Info Card */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="w-full md:w-1/2 p-10 md:p-14 rounded-3xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl flex flex-col justify-center"
+        >
+          <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-teal-400 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-indigo-500/20">
+            <Users className="text-white" size={24} />
           </div>
           
-          <h1 className="text-4xl font-light tracking-tight text-slate-900 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
             StudyBoard
           </h1>
-          <p className="text-lg text-slate-500 font-light leading-relaxed mb-12">
-            A minimalist workspace for real-time collaboration. Brainstorm, teach, and map out ideas seamlessly.
+          <p className="text-lg text-slate-300 font-light leading-relaxed mb-10">
+            A next-generation collaborative canvas. Brainstorm seamlessly with a stunningly smooth workspace.
           </p>
 
           <div className="space-y-8">
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs font-semibold text-slate-400">1</span>
+            <div className="flex items-start gap-5">
+              <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                <span className="text-sm font-semibold text-teal-300">1</span>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Create a Profile</h3>
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">Pick a name and cursor marker color to identify yourself on the shared canvas.</p>
+                <h3 className="text-base font-semibold text-white">Create a Profile</h3>
+                <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">Choose a moniker and an accent color to represent yourself on the board.</p>
               </div>
             </div>
             
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs font-semibold text-slate-400">2</span>
+            <div className="flex items-start gap-5">
+              <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                <span className="text-sm font-semibold text-teal-300">2</span>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Host or Join</h3>
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">Start a fresh whiteboard session or join a collaborator's active room via a link.</p>
+                <h3 className="text-base font-semibold text-white">Host or Join</h3>
+                <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">Spin up a fresh workspace instantly, or sync into a friend's live session.</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs font-semibold text-slate-400">3</span>
+            <div className="flex items-start gap-5">
+              <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                <span className="text-sm font-semibold text-teal-300">3</span>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Collaborate</h3>
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">Draw freehand, add sticky notes, insert shapes, and export your work when done.</p>
+                <h3 className="text-base font-semibold text-white">Flow Together</h3>
+                <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">Draw, annotate, and brainstorm in real-time with zero latency constraints.</p>
               </div>
             </div>
           </div>
+        </motion.div>
 
-        </div>
-      </div>
-
-      {/* Right Column: Interaction Forms */}
-      <div className="flex-1 flex flex-col justify-center p-10 md:p-16 lg:p-24 relative bg-white">
-        <div className="max-w-sm w-full mx-auto">
+        {/* Right Pane - Glass Action Card */}
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+          className="w-full md:w-[420px] p-8 md:p-10 rounded-3xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl relative overflow-hidden"
+        >
+          {/* Subtle top glare effect */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           
           <AnimatePresence mode="wait">
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex gap-3 p-4 mb-6 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-sm"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="flex gap-3 p-4 mb-6 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-200 text-sm backdrop-blur-sm"
               >
-                <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-400" />
                 <span>{error}</span>
               </motion.div>
             )}
@@ -188,45 +201,42 @@ const Lobby = ({ onJoin }) => {
             {step === 1 ? (
               <motion.form
                 key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
                 onSubmit={handleNextStep}
                 className="flex flex-col gap-8"
               >
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900">Get Started</h2>
-                  <p className="text-sm text-slate-500 mt-2">Setup your workspace identity.</p>
+                  <h2 className="text-3xl font-bold text-white tracking-tight">Identity</h2>
+                  <p className="text-sm text-slate-400 mt-2">How should others see you?</p>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your Name</label>
+                <div className="flex flex-col gap-2 relative group">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Your Name</label>
                   <input
                     type="text"
                     placeholder="Enter your name..."
                     value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value);
-                      if (error) setError('');
-                    }}
-                    className="w-full px-0 py-3 bg-transparent border-b border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-900 outline-none transition-colors text-lg"
+                    onChange={(e) => { setUsername(e.target.value); if (error) setError(''); }}
+                    className="w-full px-5 py-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-indigo-400 focus:bg-white/10 outline-none transition-all text-base shadow-inner"
                   />
                 </div>
 
-                <div className="flex flex-col gap-4">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cursor Color</label>
-                  <div className="flex gap-3 flex-wrap">
+                <div className="flex flex-col gap-3 ml-1">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cursor Color</label>
+                  <div className="flex gap-3 flex-wrap mt-1">
                     {AVATAR_COLORS.map(color => (
                       <button
                         key={color}
                         type="button"
                         onClick={() => setSelectedColor(color)}
                         style={{ backgroundColor: color }}
-                        className={`w-8 h-8 rounded-full transition-all cursor-pointer ${
+                        className={`w-9 h-9 rounded-full transition-all cursor-pointer shadow-lg ${
                           selectedColor === color 
-                            ? 'ring-2 ring-slate-900 ring-offset-2 scale-110' 
-                            : 'opacity-50 hover:opacity-100 hover:scale-105'
+                            ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110 shadow-current' 
+                            : 'opacity-60 hover:opacity-100 hover:scale-105'
                         }`}
                       />
                     ))}
@@ -235,30 +245,30 @@ const Lobby = ({ onJoin }) => {
 
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium flex items-center justify-center gap-2 transition-colors mt-2"
+                  className="w-full py-4 mt-4 rounded-xl bg-gradient-to-r from-indigo-500 to-teal-400 hover:from-indigo-400 hover:to-teal-300 text-white font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transform hover:-translate-y-0.5"
                 >
                   <span>Continue</span>
-                  <ArrowRight size={16} />
+                  <ArrowRight size={18} />
                 </button>
               </motion.form>
             ) : (
               <motion.div
                 key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
                 className="flex flex-col gap-10"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-semibold text-slate-900">Join Workspace</h2>
-                    <p className="text-sm text-slate-500 mt-2">Choose your session.</p>
+                    <h2 className="text-3xl font-bold text-white tracking-tight">Workspace</h2>
+                    <p className="text-sm text-slate-400 mt-2">Enter the collaborative zone.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-slate-900 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition-colors -mr-2"
                   >
                     <ArrowLeft size={16} />
                     Back
@@ -267,26 +277,23 @@ const Lobby = ({ onJoin }) => {
 
                 <div className="flex flex-col gap-10">
                   {/* Host Section */}
-                  <form onSubmit={(e) => handleSubmit(e, 'create')} className="flex flex-col gap-4 group">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-sm font-semibold text-slate-900">Start New Whiteboard</h3>
+                  <form onSubmit={(e) => handleSubmit(e, 'create')} className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1 ml-1">
+                      <h3 className="text-[13px] font-bold text-slate-300 tracking-wide flex items-center gap-2"><Sparkles size={14} className="text-teal-400"/> Start Fresh</h3>
                     </div>
                     <div className="flex flex-col gap-3">
                       <input
                         type="text"
-                        placeholder={`Name (e.g. ${randomPlaceholder})`}
+                        placeholder={`e.g. ${randomPlaceholder}`}
                         value={boardName}
                         disabled={loading}
-                        onChange={(e) => {
-                          setBoardName(e.target.value);
-                          if (error) setError('');
-                        }}
-                        className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-400 focus:bg-white outline-none transition-colors text-sm"
+                        onChange={(e) => { setBoardName(e.target.value); if (error) setError(''); }}
+                        className="w-full px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-teal-400 focus:bg-white/10 outline-none transition-all text-sm shadow-inner"
                       />
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 rounded-lg border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-900 font-medium transition-colors disabled:opacity-50 text-sm flex justify-center items-center gap-2"
+                        className="w-full py-3.5 rounded-xl border border-white/20 hover:border-white/40 hover:bg-white/10 text-white font-semibold transition-all disabled:opacity-50 text-sm flex justify-center items-center gap-2 shadow-sm hover:shadow-md"
                       >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : 'Host Session'}
                       </button>
@@ -295,17 +302,17 @@ const Lobby = ({ onJoin }) => {
 
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-slate-100"></div>
+                      <div className="w-full border-t border-white/10"></div>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-4 text-slate-400 font-medium tracking-wider">Or</span>
+                    <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
+                      <span className="bg-slate-900 px-4 text-slate-500 rounded-full border border-white/10 py-1">Or Connect</span>
                     </div>
                   </div>
 
                   {/* Join Section */}
                   <form onSubmit={(e) => handleSubmit(e, 'join')} className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-sm font-semibold text-slate-900">Join Existing Board</h3>
+                    <div className="flex flex-col gap-1 ml-1">
+                      <h3 className="text-[13px] font-bold text-slate-300 tracking-wide flex items-center gap-2"><Users size={14} className="text-indigo-400"/> Join Existing</h3>
                     </div>
                     <div className="flex flex-col gap-3">
                       <input
@@ -313,18 +320,15 @@ const Lobby = ({ onJoin }) => {
                         placeholder="Enter Room Code..."
                         value={roomIdInput}
                         disabled={loading}
-                        onChange={(e) => {
-                          setRoomIdInput(e.target.value);
-                          if (error) setError('');
-                        }}
-                        className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-400 focus:bg-white outline-none transition-colors text-sm"
+                        onChange={(e) => { setRoomIdInput(e.target.value); if (error) setError(''); }}
+                        className="w-full px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-indigo-400 focus:bg-white/10 outline-none transition-all text-sm shadow-inner"
                       />
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 text-sm flex justify-center items-center"
+                        className="w-full py-3.5 rounded-xl bg-white text-slate-900 hover:bg-slate-200 font-bold transition-all disabled:opacity-50 text-sm flex justify-center items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                       >
-                        Join Session
+                        Enter Room
                       </button>
                     </div>
                   </form>
@@ -332,8 +336,7 @@ const Lobby = ({ onJoin }) => {
               </motion.div>
             )}
           </AnimatePresence>
-
-        </div>
+        </motion.div>
       </div>
     </div>
   );

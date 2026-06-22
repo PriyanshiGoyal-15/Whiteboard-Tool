@@ -1049,7 +1049,7 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         isSticky: clicked.tool === 'sticky',
         isEditingExisting: true,
         text: clicked.text
-      })
+      });
       if (clicked.tool !== 'sticky' && clicked.tool !== 'text') {
         dispatch(setActiveTool('select'));
       }
