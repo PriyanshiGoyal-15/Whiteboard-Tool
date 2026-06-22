@@ -30,6 +30,7 @@ const Toolbar = () => {
   const isDarkBackground = backgroundType && backgroundType.includes('dark');
   const [isHovered, setIsHovered] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [hoveredTooltip, setHoveredTooltip] = useState(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -138,6 +139,21 @@ const Toolbar = () => {
           </div>
         </div>
 
+        <div className="relative w-full h-0 flex justify-center items-center pointer-events-none z-50">
+          <AnimatePresence>
+            {hoveredTooltip && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: -45 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-md whitespace-nowrap"
+              >
+                {hoveredTooltip}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <div className="flex items-center gap-1 w-full justify-start sm:justify-center overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {TOOLS.map((tool) => {
             const Icon = tool.icon;
@@ -148,6 +164,9 @@ const Toolbar = () => {
                 whileTap={{ scale: 0.95 }}
                 key={tool.id}
                 onClick={() => dispatch(setActiveTool(tool.id))}
+                onMouseEnter={() => setHoveredTooltip(tool.label)}
+                onMouseLeave={() => setHoveredTooltip(null)}
+                title={tool.label}
                 className={`p-2.5 rounded-xl flex-shrink-0 flex flex-col items-center justify-center transition-all relative group ${
                   isActive 
                     ? (isDarkBackground ? 'bg-blue-950/40 text-primary shadow-sm ring-1 ring-primary/30' : 'bg-blue-50 text-primary shadow-sm ring-1 ring-primary/20') 
@@ -155,10 +174,6 @@ const Toolbar = () => {
                 }`}
               >
                 <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                
-                <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md">
-                  {tool.label}
-                </div>
               </motion.button>
             );
           })}
