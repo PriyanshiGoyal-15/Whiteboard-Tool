@@ -12,7 +12,8 @@ const app = express();
 // Security headers (disable contentSecurityPolicy for Socket.io compatibility)
 app.use(helmet({ contentSecurityPolicy: false }));
 
-const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173').replace(/\\/$/, '');
+let ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+if (ALLOWED_ORIGIN.endsWith('/')) ALLOWED_ORIGIN = ALLOWED_ORIGIN.slice(0, -1);
 app.use(cors({ origin: ALLOWED_ORIGIN, methods: ['GET', 'POST'] }));
 app.use(express.json({ limit: '2mb' }));
 
