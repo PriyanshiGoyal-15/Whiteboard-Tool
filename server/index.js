@@ -68,6 +68,17 @@ const WhiteboardSchema = new mongoose.Schema({
 
 const Whiteboard = mongoose.model('Whiteboard', WhiteboardSchema);
 
+// Check if room exists endpoint
+app.get('/rooms/:roomId/exists', async (req, res) => {
+  const { roomId } = req.params;
+  try {
+    const board = await Whiteboard.findOne({ roomId }).lean();
+    res.json({ exists: !!board });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Validation Helpers ──────────────────────────────────────────────────────
 const isValidRoomId = (id) =>
   typeof id === 'string' && id.length > 0 && id.length <= 128;

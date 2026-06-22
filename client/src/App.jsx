@@ -6,6 +6,7 @@ import { store } from './store/store';
 import TopBar from './components/TopBar';
 import Toolbar from './components/Toolbar';
 import CanvasArea from './components/CanvasArea';
+import Lobby from './components/Lobby';
 
 // In dev, connects directly to localhost:3001.
 // In production, set VITE_SERVER_URL to your deployed backend URL.
@@ -15,12 +16,19 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connected' | 'connecting' | 'disconnected'
 
-  const [roomId] = useState(() => {
-    const storedRoomId = localStorage.getItem('roomId');
-    if (storedRoomId) return storedRoomId;
-    const newRoomId = crypto.randomUUID();
-    localStorage.setItem('roomId', newRoomId);
-    return newRoomId;
+  const [roomId, setRoomId] = useState(() => {
+    return new URLSearchParams(window.location.search).get('room') || null;
+  });
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem('username') || null;
+  });
+  const [userColor, setUserColor] = useState(() => {
+    return localStorage.getItem('userColor') || '#0078d4';
+  });
+  const [isJoined, setIsJoined] = useState(() => {
+    const urlRoomId = new URLSearchParams(window.location.search).get('room');
+    const storedUsername = localStorage.getItem('username');
+    return Boolean(urlRoomId && storedUsername);
   });
 
   const canvasRef = useRef(null);
@@ -29,7 +37,20 @@ function App() {
   const elements = useSelector((state) => state.whiteboard.elements);
   const backgroundType = useSelector((state) => state.whiteboard.backgroundType);
 
+  const handleJoin = ({ username, roomId, color }) => {
+    setUsername(username);
+    setRoomId(roomId);
+    if (color) setUserColor(color);
+    setIsJoined(true);
+    
+    // Update the URL to include the room ID so it can be shared easily
+    const newUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomId)}`;
+    window.history.replaceState({ path: newUrl }, '', newUrl);
+  };
+
   useEffect(() => {
+    if (!isJoined || !roomId) return;
+
     const newSocket = io(SERVER_URL, {
       // Let socket.io handle reconnects with exponential backoff
       reconnectionDelayMax: 10000,
@@ -84,22 +105,23 @@ function App() {
     });
 
     return () => newSocket.close();
-  }, [roomId, dispatch]);
+  }, [roomId, dispatch, isJoined]);
 
   // Debounced MongoDB save — 1 second after last change
   useEffect(() => {
-    if (!socket || !isInitializedRef.current) return;
+    if (!isJoined || !socket || !isInitializedRef.current) return;
     const delay = setTimeout(() => {
       socket.emit('save-state', { roomId, elements, background: backgroundType });
     }, 1000);
     return () => clearTimeout(delay);
-  }, [elements, backgroundType, socket, roomId]);
+  }, [elements, backgroundType, socket, roomId, isJoined]);
 
   // Last-chance save on tab close/refresh.
   // IMPORTANT: reads from store.getState() directly — NOT from the React closure —
   // because React batches re-renders asynchronously, so the closed-over `elements`
   // variable can be one render stale when the user reloads very quickly.
   useEffect(() => {
+    if (!isJoined) return;
     const handleBeforeUnload = () => {
       if (socket && isInitializedRef.current) {
         const state = store.getState();
@@ -112,7 +134,7 @@ function App() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [socket, roomId]); // elements/backgroundType intentionally excluded — we read from store directly
+  }, [socket, roomId, isJoined]); // elements/backgroundType intentionally excluded — we read from store directly
 
   const handleUndo = () => {
     dispatch(undo());
@@ -144,6 +166,7 @@ function App() {
 
   // Global keyboard shortcuts for undo/redo
   useEffect(() => {
+    if (!isJoined) return;
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       const isCmdOrCtrl = e.metaKey || e.ctrlKey;
@@ -161,7 +184,7 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [socket]);
+  }, [socket, isJoined]);
 
   const handleExport = () => {
     if (canvasRef.current) {
@@ -184,9 +207,14 @@ function App() {
     }
   };
 
+  if (!isJoined) {
+    return <Lobby onJoin={handleJoin} />;
+  }
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-background">
       <TopBar
+        roomId={roomId}
         onExport={handleExport}
         onClear={handleClear}
         onUndo={handleUndo}
@@ -197,6 +225,8 @@ function App() {
       <CanvasArea
         socket={socket}
         roomId={roomId}
+        username={username}
+        userColor={userColor}
         forwardRef={canvasRef}
         onUndo={handleUndo}
         onRedo={handleRedo}

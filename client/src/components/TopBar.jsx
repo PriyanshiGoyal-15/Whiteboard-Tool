@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Undo2, Redo2, Download, Trash2, Users, Wifi, WifiOff, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -35,9 +35,19 @@ const ConnectionBadge = ({ status, isDark }) => {
   );
 };
 
-const TopBar = ({ onExport, onClear, onUndo, onRedo, connectionStatus = 'connecting' }) => {
+const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 'connecting' }) => {
   const { history, redoHistory, backgroundType } = useSelector((state) => state.whiteboard);
   const isDarkBackground = backgroundType && backgroundType.includes('dark');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    if (!roomId) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomId)}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <motion.div 
@@ -62,6 +72,30 @@ const TopBar = ({ onExport, onClear, onUndo, onRedo, connectionStatus = 'connect
         </h1>
         <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'}`} />
         <ConnectionBadge status={connectionStatus} isDark={isDarkBackground} />
+
+        {roomId && (
+          <>
+            <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'}`} />
+            <button
+              onClick={handleCopyLink}
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-mono transition-all border cursor-pointer select-none ${
+                copied
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : isDarkBackground
+                  ? 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-neutral-600 hover:text-white'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900'
+              }`}
+              title="Click to copy invite link"
+            >
+              <span>Room: {roomId.slice(0, 8)}...</span>
+              {copied ? (
+                <span className="text-[10px] font-bold text-emerald-400">Copied!</span>
+              ) : (
+                <span className="text-[10px] opacity-65">Copy Link</span>
+              )}
+            </button>
+          </>
+        )}
       </div>
       
       <div className="flex items-center gap-0.5">

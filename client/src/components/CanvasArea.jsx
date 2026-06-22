@@ -112,7 +112,7 @@ const BACKGROUNDS = [
   }
 ];
 
-const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
+const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, onRedo }) => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const dispatch = useDispatch();
@@ -881,7 +881,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
     const worldCoords = getWorldCoordinates(clientX, clientY);
     
     if (socket && roomId) {
-      socket.emit('cursor-move', { roomId, socketId: socket.id, x: worldCoords.x, y: worldCoords.y, color });
+      socket.emit('cursor-move', { roomId, socketId: socket.id, x: worldCoords.x, y: worldCoords.y, color: userColor, username });
     }
 
     if (isResizingRef.current && initialResizeState.current) {
@@ -1049,9 +1049,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
         isSticky: clicked.tool === 'sticky',
         isEditingExisting: true,
         text: clicked.text
-      });
-      // Stay in 'select' mode — dispatching setActiveTool('sticky') here would
-      // trigger the useEffect that spawns a brand-new sticky note.
+      })
       if (clicked.tool !== 'sticky' && clicked.tool !== 'text') {
         dispatch(setActiveTool('select'));
       }
@@ -1698,7 +1696,7 @@ const CanvasArea = ({ socket, roomId, forwardRef, onUndo, onRedo }) => {
             <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" fill={cursor.color} fillOpacity="0.5" />
           </svg>
           <div className="bg-white/80 backdrop-blur-md px-2 py-0.5 rounded shadow-sm text-[10px] font-semibold mt-1 border border-gray-100" style={{ color: cursor.color }}>
-            Collaborator
+            {cursor.username || 'Collaborator'}
           </div>
         </div>
       ))}
