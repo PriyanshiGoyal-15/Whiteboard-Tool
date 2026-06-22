@@ -201,7 +201,7 @@ function App() {
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-background">
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-background">
       <TopBar
         roomId={roomId}
         onExport={handleExport}
