@@ -122,6 +122,12 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   const currentBg = BACKGROUNDS.find(bg => bg.id === backgroundType) || BACKGROUNDS[0];
   const isDarkBackground = currentBg.id.includes('dark');
 
+  const activePointersRef = useRef(new Map());
+  const initialPinchDistRef = useRef(null);
+  const initialPinchZoomRef = useRef(null);
+  const initialPinchMidpointRef = useRef(null);
+  const initialPanOffsetRef = useRef(null);
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentElement, setCurrentElement] = useState(null);
 
@@ -970,6 +976,43 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   };
 
   const handlePointerMove = (e) => {
+    if (activePointersRef.current.has(e.pointerId)) {
+      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    if (activePointersRef.current.size === 2) {
+      const pointers = Array.from(activePointersRef.current.values());
+      const dist = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+      const midX = (pointers[0].x + pointers[1].x) / 2;
+      const midY = (pointers[0].y + pointers[1].y) / 2;
+
+      if (initialPinchDistRef.current === null) {
+        initialPinchDistRef.current = dist;
+        initialPinchZoomRef.current = zoom;
+        initialPinchMidpointRef.current = { x: midX, y: midY };
+        initialPanOffsetRef.current = { ...panOffset };
+        return;
+      }
+
+      const zoomRatio = dist / initialPinchDistRef.current;
+      const newZoom = Math.min(Math.max(0.1, initialPinchZoomRef.current * zoomRatio), 5);
+
+      const canvasMidX = (initialPinchMidpointRef.current.x - initialPanOffsetRef.current.x) / initialPinchZoomRef.current;
+      const canvasMidY = (initialPinchMidpointRef.current.y - initialPanOffsetRef.current.y) / initialPinchZoomRef.current;
+
+      const newPanX = midX - canvasMidX * newZoom;
+      const newPanY = midY - canvasMidY * newZoom;
+
+      const panDeltaX = midX - initialPinchMidpointRef.current.x;
+      const panDeltaY = midY - initialPinchMidpointRef.current.y;
+
+      setZoom(newZoom);
+      dispatch(setPanOffset({ x: newPanX + panDeltaX, y: newPanY + panDeltaY }));
+      return;
+    }
+    
+    if (activePointersRef.current.size > 2) return;
+
     const { clientX, clientY } = e;
     const worldCoords = getWorldCoordinates(clientX, clientY);
 
@@ -1208,6 +1251,17 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   };
 
   const handlePointerDown = (e) => {
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointersRef.current.size === 2) {
+      setIsDrawing(false);
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      initialPinchDistRef.current = null;
+      return;
+    }
+    if (activePointersRef.current.size > 2) return;
+
     const { clientX, clientY } = e;
     const worldCoords = getWorldCoordinates(clientX, clientY);
 
@@ -1402,7 +1456,15 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
     });
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
+    if (e && e.pointerId) {
+      activePointersRef.current.delete(e.pointerId);
+    }
+    if (activePointersRef.current.size > 0) {
+      initialPinchDistRef.current = null;
+      return;
+    }
+
     isResizingRef.current = false;
     isDraggingRef.current = false;
 
@@ -1518,10 +1580,8 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
   }, [handlePointerUp]);
 
   useEffect(() => {
-    const handleGlobalPointerUp = () => {
-      if (isDraggingRef.current || isResizingRef.current || isDrawingMarquee || isDrawing) {
-        handlePointerUpRef.current();
-      }
+    const handleGlobalPointerUp = (e) => {
+      handlePointerUpRef.current(e);
     };
     window.addEventListener('pointerup', handleGlobalPointerUp);
     return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
@@ -1637,6 +1697,9 @@ const CanvasArea = ({ socket, roomId, username, userColor, forwardRef, onUndo, o
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onDoubleClick={handleDoubleClick}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerOut={handlePointerUp}
         className={`touch-none w-full h-full absolute inset-0 ${getCursorStyle()}`}
       />
 
