@@ -117,16 +117,16 @@ const Lobby = ({ onJoin }) => {
   };
 
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-x-hidden overflow-y-auto">
+    <div className="relative w-full h-[100dvh] bg-slate-950 font-sans selection:bg-indigo-500/30 overflow-x-hidden overflow-y-auto pt-8 pb-16 md:pt-16 lg:pt-24">
       <BackgroundOrbs />
       
-      <div className="relative z-10 w-full max-w-5xl mx-auto p-4 py-12 md:p-8 flex flex-col md:flex-row gap-8 items-center justify-center min-h-[600px]">
+      <div className="relative z-10 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 md:gap-8 items-stretch md:items-center justify-center">
         
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full md:w-1/2 p-10 md:p-14 rounded-3xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl flex flex-col justify-center"
+          className="w-full md:w-1/2 p-8 sm:p-10 md:p-14 rounded-3xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl flex flex-col justify-center"
         >
           <div className="w-14 h-14 bg-linear-to-br from-indigo-500 to-teal-400 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-indigo-500/20">
             <Users className="text-white" size={24} />

@@ -59,19 +59,20 @@ const Toolbar = () => {
       </AnimatePresence>
 
       <motion.div 
+        layout
         initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1, height: isHovered ? 130 : 64 }}
+        animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`rounded-2xl px-4 py-2 flex flex-col items-center justify-end border backdrop-blur-md transition-all duration-300 ${
+        className={`rounded-2xl px-2 sm:px-4 py-2 flex flex-col items-center justify-end border backdrop-blur-md transition-all duration-300 w-[calc(100vw-32px)] sm:w-auto max-w-[600px] ${
           isDarkBackground 
             ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
             : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
         }`}
       >
-        <div className="w-full flex justify-between items-center px-4 pb-4 w-[500px]">
-          <div className="flex flex-col gap-2">
+        <div className="w-full flex flex-col sm:flex-row justify-between items-center px-2 sm:px-4 pb-4 max-w-[500px] gap-3 sm:gap-0">
+          <div className="flex flex-col gap-2 w-full sm:w-auto items-center sm:items-start">
             <motion.span 
               animate={{ opacity: isHovered ? 1 : 0, display: isHovered ? 'block' : 'none' }}
               className={`text-[10px] font-bold uppercase tracking-wider ${isDarkBackground ? 'text-neutral-500' : 'text-gray-400'}`}
@@ -137,7 +138,7 @@ const Toolbar = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 w-full justify-center">
+        <div className="flex items-center gap-1 w-full justify-center flex-wrap">
           {TOOLS.map((tool) => {
             const Icon = tool.icon;
             const isActive = activeTool === tool.id;

@@ -74,18 +74,18 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className={`absolute top-4 left-4 rounded-xl px-4 py-2 flex items-center gap-3 z-40 border backdrop-blur-md transition-colors duration-300 ${
+      className={`absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-auto rounded-xl px-2 sm:px-4 py-2 flex flex-wrap items-center gap-2 sm:gap-3 z-40 border backdrop-blur-md transition-colors duration-300 w-[calc(100vw-16px)] sm:w-auto ${
         isDarkBackground 
           ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
           : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
       }`}
     >
-      <div className={`flex items-center gap-2 mr-2 border-r pr-4 ${
+      <div className={`flex items-center gap-2 sm:mr-2 border-r pr-2 sm:pr-4 ${
         isDarkBackground ? 'border-neutral-800' : 'border-gray-200'
       }`}>
-        <a href="/" title="Return to Lobby" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity no-underline">
+        <a href="/" title="Return to Lobby" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity no-underline shrink-0">
           <Users size={18} className="text-primary" />
-          <h1 className={`text-md font-semibold tracking-wide m-0 ${
+          <h1 className={`hidden sm:block text-md font-semibold tracking-wide m-0 ${
             isDarkBackground ? 'text-neutral-100' : 'text-gray-800'
           }`}>
             Study<span className="text-primary">Board</span>
@@ -95,8 +95,8 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
         <ConnectionBadge status={connectionStatus} isDark={isDarkBackground} />
 
         {roomId && (
-          <div className="relative flex items-center" ref={menuRef}>
-            <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'} mx-2`} />
+          <div className="relative flex items-center shrink-0" ref={menuRef}>
+            <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'} mx-1 sm:mx-2`} />
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
               className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono transition-all border cursor-pointer select-none ${
@@ -154,13 +154,13 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
         )}
       </div>
       
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5 shrink-0">
         <motion.button
           whileHover={history.length > 0 ? { scale: 1.05, backgroundColor: isDarkBackground ? '#262626' : '#f3f2f1' } : {}}
           whileTap={history.length > 0 ? { scale: 0.95 } : {}}
           onClick={onUndo}
           disabled={history.length === 0}
-          className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+          className={`p-1.5 sm:p-2 rounded-lg transition-colors flex items-center justify-center ${
             history.length === 0 
               ? (isDarkBackground ? 'text-neutral-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed') 
               : (isDarkBackground ? 'text-neutral-300 hover:text-neutral-100' : 'text-gray-600 hover:text-gray-900')
@@ -175,7 +175,7 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
           whileTap={redoHistory && redoHistory.length > 0 ? { scale: 0.95 } : {}}
           onClick={onRedo}
           disabled={!redoHistory || redoHistory.length === 0}
-          className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+          className={`p-1.5 sm:p-2 rounded-lg transition-colors flex items-center justify-center ${
             !redoHistory || redoHistory.length === 0 
               ? (isDarkBackground ? 'text-neutral-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed') 
               : (isDarkBackground ? 'text-neutral-300 hover:text-neutral-100' : 'text-gray-600 hover:text-gray-900')
@@ -190,7 +190,7 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
         whileHover={{ scale: 1.05, backgroundColor: isDarkBackground ? '#450a0a' : '#fee2e2' }}
         whileTap={{ scale: 0.95 }}
         onClick={onClear}
-        className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+        className={`p-1.5 sm:p-2 rounded-lg transition-colors flex items-center justify-center shrink-0 ${
           isDarkBackground ? 'text-neutral-300 hover:text-red-400' : 'text-gray-600 hover:text-red-600'
         }`}
         title="Clear Board"
