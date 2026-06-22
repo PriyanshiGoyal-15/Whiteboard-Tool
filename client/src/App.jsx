@@ -16,7 +16,7 @@ function App() {
 
   const [roomId, setRoomId] = useState(() => {
     return new URLSearchParams(window.location.search).get('room') || null;
-  });
+  }); 
   const [username, setUsername] = useState(() => {
     return localStorage.getItem('username') || null;
   });

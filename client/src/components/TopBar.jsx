@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { Undo2, Redo2, Download, Trash2, Users, Wifi, WifiOff, Loader } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Undo2, Redo2, Download, Trash2, Users, Wifi, WifiOff, Loader, ChevronDown, Copy, Link2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ConnectionBadge = ({ status, isDark }) => {
   const configs = {
@@ -38,14 +38,32 @@ const ConnectionBadge = ({ status, isDark }) => {
 const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 'connecting' }) => {
   const { history, redoHistory, backgroundType } = useSelector((state) => state.whiteboard);
   const isDarkBackground = backgroundType && backgroundType.includes('dark');
-  const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copiedType, setCopiedType] = useState(null);
+  const menuRef = useRef(null);
 
-  const handleCopyLink = () => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowShareMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleCopy = (type) => {
     if (!roomId) return;
-    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomId)}`;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    const textToCopy = type === 'code' 
+      ? roomId 
+      : `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomId)}`;
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setCopiedType(type);
+      setTimeout(() => {
+        setCopiedType(null);
+        setShowShareMenu(false);
+      }, 2000);
     });
   };
 
@@ -54,7 +72,9 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
       initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`absolute top-4 left-4 rounded-xl px-4 py-2 flex items-center gap-3 z-20 border backdrop-blur-md transition-colors duration-300 ${
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      className={`absolute top-4 left-4 rounded-xl px-4 py-2 flex items-center gap-3 z-40 border backdrop-blur-md transition-colors duration-300 ${
         isDarkBackground 
           ? 'bg-neutral-900/90 border-neutral-800/80 text-neutral-200 shadow-neutral-950/20' 
           : 'bg-white/90 border-gray-200/80 text-gray-800 shadow-gray-200/20'
@@ -75,27 +95,62 @@ const TopBar = ({ roomId, onExport, onClear, onUndo, onRedo, connectionStatus = 
         <ConnectionBadge status={connectionStatus} isDark={isDarkBackground} />
 
         {roomId && (
-          <>
-            <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'}`} />
+          <div className="relative flex items-center" ref={menuRef}>
+            <div className={`h-4 w-px ${isDarkBackground ? 'bg-neutral-700' : 'bg-gray-200'} mx-2`} />
             <button
-              onClick={handleCopyLink}
-              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-mono transition-all border cursor-pointer select-none ${
-                copied
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  : isDarkBackground
-                  ? 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-neutral-600 hover:text-white'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900'
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono transition-all border cursor-pointer select-none ${
+                showShareMenu || copiedType
+                  ? (isDarkBackground ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900')
+                  : (isDarkBackground ? 'bg-transparent border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white' : 'bg-transparent border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900')
               }`}
-              title="Click to copy invite link"
+              title="Share Room"
             >
               <span>Room: {roomId.slice(0, 8)}...</span>
-              {copied ? (
-                <span className="text-[10px] font-bold text-emerald-400">Copied!</span>
-              ) : (
-                <span className="text-[10px] opacity-65">Copy Link</span>
-              )}
+              <ChevronDown size={14} className={`transition-transform ${showShareMenu ? 'rotate-180' : ''}`} />
             </button>
-          </>
+
+            <AnimatePresence>
+              {showShareMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className={`absolute top-full left-0 mt-2 w-48 rounded-xl border shadow-xl overflow-hidden z-50 ${
+                    isDarkBackground ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div className="p-1 flex flex-col gap-0.5">
+                    <button
+                      onClick={() => handleCopy('code')}
+                      className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
+                        isDarkBackground ? 'text-neutral-300 hover:bg-neutral-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Copy size={14} />
+                        <span>Copy Room Code</span>
+                      </div>
+                      {copiedType === 'code' && <span className="text-[10px] font-bold text-emerald-500">Copied!</span>}
+                    </button>
+                    <button
+                      onClick={() => handleCopy('link')}
+                      className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
+                        isDarkBackground ? 'text-neutral-300 hover:bg-neutral-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Link2 size={14} />
+                        <span>Copy Full URL</span>
+                      </div>
+                      {copiedType === 'link' && <span className="text-[10px] font-bold text-emerald-500">Copied!</span>}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
       </div>
       
