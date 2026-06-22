@@ -186,7 +186,7 @@ io.on('connection', (socket) => {
     if (!isValidRoomId(roomId)) return;
     if (!isValidElements(elements)) return;
 
-    socket.to(roomId).emit('init-state', {
+    socket.to(roomId).emit('sync-board', {
       elements,
       background: background || null
     });

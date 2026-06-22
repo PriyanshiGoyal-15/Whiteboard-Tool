@@ -92,6 +92,13 @@ function App() {
       }
     });
 
+    newSocket.on('sync-board', (data) => {
+      if (data) {
+        if (Array.isArray(data.elements)) dispatch(setElements(data.elements));
+        if (data.background) dispatch(setBackgroundType(data.background));
+      }
+    });
+
     return () => newSocket.close();
   }, [roomId, dispatch, isJoined]);
 
