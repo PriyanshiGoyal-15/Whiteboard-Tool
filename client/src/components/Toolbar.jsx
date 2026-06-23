@@ -154,29 +154,31 @@ const Toolbar = () => {
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center gap-1 w-full justify-start lg:justify-center overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {TOOLS.map((tool) => {
-            const Icon = tool.icon;
-            const isActive = activeTool === tool.id;
-            return (
-              <motion.button
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                key={tool.id}
-                onClick={() => dispatch(setActiveTool(tool.id))}
-                onMouseEnter={() => setHoveredTooltip(tool.label)}
-                onMouseLeave={() => setHoveredTooltip(null)}
-                title={tool.label}
-                className={`p-2.5 rounded-xl flex-shrink-0 flex flex-col items-center justify-center transition-all relative group ${
-                  isActive 
-                    ? (isDarkBackground ? 'bg-blue-950/40 text-primary shadow-sm ring-1 ring-primary/30' : 'bg-blue-50 text-primary shadow-sm ring-1 ring-primary/20') 
-                    : (isDarkBackground ? 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
-                }`}
-              >
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </motion.button>
-            );
-          })}
+        <div className="w-full overflow-x-auto pb-2 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="flex items-center gap-1 w-max mx-auto px-1">
+            {TOOLS.map((tool) => {
+              const Icon = tool.icon;
+              const isActive = activeTool === tool.id;
+              return (
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  key={tool.id}
+                  onClick={() => dispatch(setActiveTool(tool.id))}
+                  onMouseEnter={() => setHoveredTooltip(tool.label)}
+                  onMouseLeave={() => setHoveredTooltip(null)}
+                  title={tool.label}
+                  className={`p-2.5 rounded-xl flex-shrink-0 flex flex-col items-center justify-center transition-all relative group ${
+                    isActive 
+                      ? (isDarkBackground ? 'bg-blue-950/40 text-primary shadow-sm ring-1 ring-primary/30' : 'bg-blue-50 text-primary shadow-sm ring-1 ring-primary/20') 
+                      : (isDarkBackground ? 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
+                  }`}
+                >
+                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
       </motion.div>
     </div>
